@@ -73,6 +73,11 @@ SuperKeyword super
 WhileKeyword while
 UnderlineKeyword _
 VarKeyword var
+YieldKeyword yield
+PermitsKeyword permits
+SealedKeyword sealed
+NonSealedKeyword non-sealed
+RecordKeyword record
 
 Literal {IntegerLiteral}|{FloatingPointLiteral}|{BooleanLiteral}|{CharacterLiteral}|{StringLiteral}|{NullLiteral}
 
@@ -227,6 +232,11 @@ ShiftRightArithmeticAssignmentOperator >>>=
 {WhileKeyword} { return WhileKeyword; }
 {UnderlineKeyword} { return UnderlineKeyword; }
 {VarKeyword} { return VarKeyword; }
+{YieldKeyword} { return YieldKeyword; }
+{PermitsKeyword} { return PermitsKeyword; }
+{SealedKeyword} { return SealedKeyword; }
+{NonSealedKeyword} { return NonSealedKeyword; }
+{RecordKeyword} { return RecordKeyword; }
 
 {Literal} { return Literal; }
 {Identifier} { return Identifier; }

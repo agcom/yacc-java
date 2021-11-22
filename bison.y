@@ -117,58 +117,53 @@
 %token ShiftRightArithmeticAssignmentOperator ">>>="
 
 %%
-
-CompilationUnit:
-	PackageDeclarationOptional ImportDeclarationKleeneStar ClassDeclarationKleeneStar
+Compilation:
+	PkgOpt Imports Classes
 	;
 
-PackageDeclarationOptional:
-	PackageDeclaration
+PkgOpt:
+	Pkg
 	| %empty
 	;
 
-PackageDeclaration:
+Pkg:
 	"package" Name ';'
 	;
 
 Name:
-	Identifier DotIdentifierKleeneStar
+	Name '.' Identifier
+	| Identifier
 	;
 
-DotIdentifierKleeneStar:
-	DotIdentifierKleeneStar '.' Identifier
+Imports:
+	Imports Import
 	| %empty
 	;
 
-ImportDeclarationKleeneStar:
-	ImportDeclarationKleeneStar ImportDeclaration
-	| %empty
+Import:
+	"import" StaticOpt Name ';'
 	;
 
-ImportDeclaration:
-	"import" StaticKeywordOptional Name ';'
-	;
-
-StaticKeywordOptional:
+StaticOpt:
 	"static"
 	| %empty
 	;
 
-ClassDeclarationKleeneStar:
-	ClassDeclarationKleeneStar ClassDeclaration
+Classes:
+	Classes Class
 	| %empty
 	;
 
-ClassDeclaration:
-	ClassModifierKleeneStar "class" Identifier ClassExtendsOptional ClassImplementsOptional ClassBody
+Class:
+	ClassMods "class" Identifier ClassExtendsOpt ClassImplOpt ClassBody
 	;
 
-ClassModifierKleeneStar:
-	ClassModifierKleeneStar ClassModifier
+ClassMods:
+	ClassMods ClassMod
 	| %empty
 	;
 
-ClassModifier:
+ClassMod:
 	"public"
 	| "protected"
 	| "private"
@@ -178,7 +173,7 @@ ClassModifier:
 	| "strictfp"
 	;
 
-ClassExtendsOptional:
+ClassExtendsOpt:
 	ClassExtends
 	| %empty
 	;
@@ -187,51 +182,48 @@ ClassExtends:
 	"extends" Name
 	;
 
-ClassImplementsOptional:
-	ClassImplements
+ClassImplOpt:
+	ClassImpl
 	| %empty
 	;
 
-ClassImplements:
+ClassImpl:
 	"implements" NameListNonEmpty
 	;
 
 NameListNonEmpty:
-	Name CommaNameKleeneStar
-	;
-
-CommaNameKleeneStar:
-	CommaNameKleeneStar ',' Name
-	| %empty
+	Name
+	| NameListNonEmpty ',' Name
 	;
 
 ClassBody:
-	'{' ClassBodyDeclarationKleeneStar '}'
+	'{' ClassBodyMembers '}'
 	;
 
-ClassBodyDeclarationKleeneStar:
-	ClassBodyDeclarationKleeneStar ClassBodyDeclaration
+ClassBodyMembers:
+	ClassBodyMembers ClassBodyMember
 	| %empty
 	;
 
-ClassBodyDeclaration:
-	Initializer
-	| MethodDeclaration
+ClassBodyMember:
+	Init
+	| Method
 	;
 
-Initializer:
+Init:
 	Block
 	;
 
-MethodDeclaration:
-	MethodModifierKleeneStar MethodHeader MethodBody
+Method:
+	MethodMods MethodHead MethodBody
 	;
 
-MethodModifierKleeneStar:
-	MethodModifierKleeneStar MethodModifier
-	| %empty;
+MethodMods:
+	MethodMods MethodMod
+	| %empty
+	;
 
-MethodModifier:
+MethodMod:
 	"public"
 	| "protected"
 	| "private"
@@ -243,22 +235,22 @@ MethodModifier:
 	| "strictfp"
 	;
 
-MethodHeader:
-	Result MethodDeclarator ThrowsOptional
+MethodHead:
+	MethodReturnType MethodSign ThrowsOpt
 	;
 
-Result:
+MethodReturnType:
 	Type
 	| "void"
 	;
 
 Type:
 	Name
-	| PrimitiveType
-	| ArrayType
+	| PrimType
+	| ArrType
 	;
 
-PrimitiveType:
+PrimType:
 	"byte"
 	| "short"
 	| "int"
@@ -269,69 +261,44 @@ PrimitiveType:
 	| "boolean"
 	;
 
-ArrayType:
-	PrimitiveTypeOrName Dims
-	;
-
-PrimitiveTypeOrName:
-	PrimitiveType
-	| Name
+ArrType:
+	PrimType Dims
+	| Name Dims
 	;
 
 Dims:
-	OpenBracketCloseBracketKleenePlus
+	'[' ']'
+	| Dims '[' ']'
 	;
 
-OpenBracketCloseBracketKleenePlus:
-	'[' ']' OpenBracketCloseBracketKleeneStar
+MethodSign:
+	Identifier '(' ParamList ')'
 	;
 
-OpenBracketCloseBracketKleeneStar:
-	OpenBracketCloseBracketKleeneStar '[' ']'
+ParamList:
+	%empty
+	| ParamListNonEmpty
+	;
+
+ParamListNonEmpty:
+	Param
+	| ParamList ',' Param
+	;
+
+Param:
+	VarMods Type Identifier
+	;
+
+VarMods:
+	VarMods VarMod
 	| %empty
 	;
 
-MethodDeclarator:
-	Identifier '(' ParameterList ')' DimsOptional
-	;
-
-ParameterList:
-	ParameterListNonEmpty
-	| %empty
-	;
-
-ParameterListNonEmpty:
-	Parameter CommaParameterKleeneStar
-	;
-
-Parameter:
-	VariableModifierKleeneStar Type VariableDeclaratorId
-	;
-
-VariableModifierKleeneStar:
-	VariableModifierKleeneStar VariableModifier
-	| %empty
-	;
-
-VariableModifier:
+VarMod:
 	"final"
 	;
 
-VariableDeclaratorId:
-	Identifier DimsOptional
-	;
-
-CommaParameterKleeneStar:
-	CommaParameterKleeneStar ',' Parameter
-	| %empty
-	;
-
-DimsOptional:
-	Dims
-	| %empty
-	;
-
-ThrowsOptional:
+ThrowsOpt:
 	Throws
 	| %empty
 	;
@@ -341,12 +308,8 @@ Throws:
 	;
 
 TypeListNonEmpty:
-	Type CommaTypeKleeneStar
-	;
-
-CommaTypeKleeneStar:
-	CommaTypeKleeneStar ',' Type
-	| %empty
+	Type
+	| TypeListNonEmpty ',' Type
 	;
 
 MethodBody:
@@ -355,101 +318,548 @@ MethodBody:
 	;
 
 Block:
-	'{' BlockStatementKleeneStar '}'
+	'{' BlockStmts '}'
 	;
 
-BlockStatementKleeneStar:
-	BlockStatementKleeneStar BlockStatement
+BlockStmts:
+	BlockStmts BlockStmt
 	| %empty
 	;
 
-BlockStatement:
-	VariableDeclaration
-	| Statement
+BlockStmt:
+	Var
+	| Stmt
 	;
 
-VariableDeclaration:
-	VariableModifierKleeneStar VariableType VariableDeclaratorListNonEmpty
+Var:
+	VarMods VarType VarDeclListNonEmpty
 	;
 
-VariableModifierKleeneStar:
-	VariableModifierKleeneStar VariableModifier
-	| %empty
-	;
-
-VariableModifier:
-	"final"
-	;
-
-VariableType:
+VarType:
 	Type
 	| "var"
 	;
 
-VariableDeclaratorListNonEmpty:
-	VariableDeclarator CommaVariableDeclaratorKleeneStar
+VarDeclListNonEmpty:
+	VarDecl
+	| VarDeclListNonEmpty ',' VarDecl
 	;
 
-CommaVariableDeclaratorKleeneStar:
-	CommaVariableDeclaratorKleeneStar ',' VariableDeclarator
+VarDecl:
+	Identifier VarAssignOpt
 	;
 
-VariableDeclarator:
-	VariableDeclaratorId EqualVariableInitializerOptional
-	;
-
-EqualVariableInitializerOptional:
-	'=' VariableInitializer
+VarAssignOpt:
+	VarAssign
 	| %empty
 	;
 
-VariableInitializer:
-	Expression
-	| ArrayInitializer
+VarAssign:
+	'=' VarInit
 	;
 
-Statement:
-	Block
-	| EmptyStatement
-	| ExpressionStatement
-	| AssertStatement
-	| SwitchStatement
-	| DoStatement
-	| BreakStatement
-	| ContinueStatement
-	| ReturnStatement
-	| SynchronizedStatement
-	| ThrowStatement
-	| TryStatement
-	| LabeledStatement
-	| IfThenStatement
-	| IfThenElseStatement
-	| WhileStatement
-	| ForStatement
+VarInit:
+	Expr
+	| ArrInit
 	;
 
-EmptyStatement:
+Stmt:
 	';'
+	| Block
+	| StmtExpr ';'
+	| AssertStmt
+	| SwitchStmt
+	| DoStmt
+	| BreakStmt
+	| ContStmt
+	| ReturnStmt
+	| SyncStmt
+	| ThrowStmt
+	| TryStmt
+	| LblStmt
+	| IfStmt
+	| IfElseStmt
+	| WhileStmt
+	| ForStmt
 	;
 
-ExpressionStatement:
-	StatementExpression ';'
+StmtNoShortIf:
+	';'
+	| Block
+	| StmtExpr ';'
+	| AssertStmt
+	| SwitchStmt
+	| DoStmt
+	| BreakStmt
+	| ContStmt
+	| ReturnStmt
+	| SyncStmt
+	| ThrowStmt
+	| TryStmt
+	| LblStmtNoShortIf
+	| IfElseStmtNoShortIf
+	| WhileStmtNoShortIf
+	| ForStmtNoShortIf
 	;
 
-StatementExpression:
-	Assignment
-	| PreIncrementExpression
-	| PreDecrementExpression
-	| PostIncrementExpression
-	| PostDecrementExpression
-	| MethodInvocation
-	| ClassInstanceCreationExpression
+StmtExpr:
+	Assign
+	| PreIncExpr
+	| PreDecExpr
+	| PostIncExpr
+	| PostDecExpr
+	| MethodInvoke
+	| NewClassExpr
 	;
 
-// Stubs
+LblStmt:
+	Identifier ':' Stmt
+	;
 
-Expression: Literal '+' Literal ';';
-ArrayInitializer: "new" "int" '[' ']' '{' '}';
+LblStmtNoShortIf:
+	Identifier ':' StmtNoShortIf
+	;
+
+IfStmt:
+	"if" '(' Expr ')' Stmt
+	;
+
+IfElseStmt:
+	"if" '(' Expr ')' StmtNoShortIf "else" Stmt
+	;
+
+IfElseStmtNoShortIf:
+	"if" '(' Expr ')' StmtNoShortIf "else" StmtNoShortIf
+	;
+
+AssertStmt:
+	"assert" Expr ';'
+	| "assert" Expr ':' Expr ';'
+	;
+
+SwitchStmt:
+	"switch" '(' Expr ')' SwitchBlock
+	;
+
+SwitchBlock:
+	'{' SwitchRulesNonEmpty '}'
+	| '{' SwitchBlockStmtGroups SwitchLblColons '}'
+	;
+
+SwitchRulesNonEmpty:
+	SwitchRule
+	| SwitchRulesNonEmpty SwitchRule
+	;
+
+SwitchRule:
+	SwitchLbl "->" Expr ';'
+	| SwitchLbl "->" Block
+	| SwitchLbl "->" ThrowStmt
+	;
+
+SwitchLbl:
+	"case" CondExprListNonEmpty
+	| "default"
+	;
+
+CondExprListNonEmpty:
+	CondExpr
+	| CondExprListNonEmpty ',' CondExpr
+	;
+
+SwitchBlockStmtGroups:
+	SwitchBlockStmtGroups SwitchBlockStmtGroup
+	| %empty
+	;
+
+SwitchLblColons:
+	SwitchLblColons SwitchLbl ':'
+	| %empty
+	;
+
+SwitchBlockStmtGroup:
+	SwitchLbl ':' SwitchLblColons BlockStmts
+	;
+
+WhileStmt:
+	"while" '(' Expr ')' Stmt
+	;
+
+WhileStmtNoShortIf:
+	"while" '(' Expr ')' StmtNoShortIf
+	;
+
+DoStmt:
+	"do" Stmt "while" '(' Expr ')'
+	;
+
+ForStmt:
+	ForIStmt
+	| ForEachStmt
+	;
+
+ForStmtNoShortIf:
+	ForIStmtNoShortIf
+	| ForEachStmtNoShortIf
+	;
+
+ForIStmt:
+	"for" '(' ForInitOpt ';' Expr ';' ForUpOpt ')' Stmt
+	;
+
+ForIStmtNoShortIf:
+	"for" '(' ForInitOpt ';' Expr ';' ForUpOpt ')' StmtNoShortIf
+	;
+
+ForInitOpt:
+	ForInit
+	| %empty
+	;
+
+ForInit:
+	StmtExprListNonEmpty
+	| VarDecl
+	;
+
+StmtExprListNonEmpty:
+	StmtExpr
+	| StmtExprListNonEmpty ',' StmtExpr
+	;
+
+ForUpOpt:
+	ForUp
+	| %empty
+	;
+
+ForUp:
+	StmtExprListNonEmpty
+	;
+
+ForEachStmt:
+	"for" '(' VarDecl ':' Expr ')' Stmt
+	;
+
+ForEachStmtNoShortIf:
+	"for" '(' VarDecl ':' Expr ')' StmtNoShortIf
+	;
+
+BreakStmt:
+	"break" IdentifierOpt ';'
+	;
+
+IdentifierOpt:
+	Identifier
+	| %empty
+	;
+
+ContStmt:
+	"continue" IdentifierOpt ';'
+	;
+
+ReturnStmt:
+	"return" ExprOpt ';'
+	;
+
+ExprOpt:
+	Expr
+	| %empty
+	;
+
+ThrowStmt:
+	"throw" Expr ';'
+	;
+
+SyncStmt:
+	"synchronized" '(' Expr ')' Block
+	;
+
+TryStmt:
+	"try" Block CatchesNonEmpty
+	| "try" Block Catches Finally
+	;
+
+CatchesNonEmpty:
+	Catch
+	| CatchesNonEmpty Catch
+	;
+
+Catch:
+	"catch" '(' VarMods CatchNameListNonEmpty ')' Block
+	;
+
+CatchNameListNonEmpty:
+	Name
+	| CatchNameListNonEmpty '|' Name
+	;
+
+Catches:
+	CatchesNonEmpty
+	| %empty
+	;
+
+Finally:
+	"finally" Block
+	;
+
+Primary:
+	PrimaryNoNewArr
+	| NewArrExpr
+	;
+
+PrimaryNoNewArr:
+	Literal
+	| ClassLiteral
+	| "this"
+	| Name '.' "this"
+	| '(' Expr ')'
+	| NewClassExpr
+	| FieldAccess
+	| ArrAccess
+	| MethodInvoke
+	| MethodRef
+	;
+
+ClassLiteral:
+	Type '.' "class"
+	| "void" '.' "class"
+	;
+
+NewClassExpr:
+	"new" Name '(' ArgList ')'
+	;
+
+ArgList:
+	ArgListNonEmpty
+	| %empty
+	;
+
+ArgListNonEmpty:
+	ArgListNonEmpty ',' Arg
+	| Arg
+	;
+
+Arg:
+	Expr
+	;
+
+FieldAccess:
+	Primary '.' Identifier
+	| "super" '.' Identifier
+	| Name '.' "super" '.' Identifier
+	;
+
+ArrAccess:
+	Name '[' Expr ']'
+	| PrimaryNoNewArr '[' Expr ']'
+	;
+
+MethodInvoke:
+	Name '(' ArgList ')'
+	| Primary '.' Identifier '(' ArgList ')'
+	| "super" '.' Identifier '(' ArgList ')'
+	| Name '.' "super" '.' Identifier '(' ArgList ')'
+	;
+
+MethodRef:
+	Name "::" Identifier
+	| Primary "::" Identifier
+	| ArrType "::" Identifier
+	| "super" "::" Identifier
+	| Name '.' "super" "::" Identifier
+	| Name "::" "new"
+	| ArrType "::" "new"
+	;
+
+NewArrExpr:
+	"new" PrimType DimExprs DimsOpt
+	| "new" Name DimExprs DimsOpt
+	| "new" PrimType Dims ArrInit
+	| "new" Name Dims ArrInit
+	;
+
+DimExprs:
+	DimExpr
+	| DimExprs DimExpr
+	;
+
+DimExpr:
+	'[' Expr ']'
+	;
+
+DimsOpt:
+	Dims
+	| %empty
+	;
+
+ArrInit:
+	'{' VarInitList CommaOpt '}'
+	;
+
+VarInitList:
+	VarInitListNonEmpty
+	| %empty
+	;
+
+VarInitListNonEmpty:
+	VarInit
+	| VarInitListNonEmpty ',' VarInit
+	;
+
+CommaOpt:
+	','
+	| %empty
+	;
+
+Expr:
+	AssignExpr
+	;
+
+AssignExpr:
+	CondExpr
+	| Assign
+	;
+
+CondExpr:
+	CondOrExpr
+	| CondOrExpr '?' Expr ':' CondExpr
+	;
+
+CondOrExpr:
+	CondAndExpr
+	| CondOrExpr "||" CondAndExpr
+	;
+
+CondAndExpr:
+	InclOrExpr
+	| CondOrExpr "||" CondAndExpr
+	;
+
+CondAndExpr:
+	InclOrExpr
+	| CondAndExpr "&&" InclOrExpr
+	;
+
+InclOrExpr:
+	ExclOrExpr
+	| InclOrExpr '|' ExclOrExpr
+	;
+
+ExclOrExpr:
+	AndExpr
+	| ExclOrExpr '^' AndExpr
+	;
+
+AndExpr:
+	EqExpr
+	AndExpr '&' EqExpr
+	;
+
+EqExpr:
+	RelExpr
+	| EqExpr "==" RelExpr
+	| EqExpr "!=" RelExpr
+	;
+
+RelExpr:
+	ShiftExpr
+	| RelExpr '<' ShiftExpr
+	| RelExpr '>' ShiftExpr
+	| RelExpr "<=" ShiftExpr
+	| RelExpr ">=" ShiftExpr
+	| InstOfExpr
+	;
+
+InstOfExpr:
+	RelExpr "instanceof" Name
+	;
+
+ShiftExpr:
+	AddExpr
+	| ShiftExpr "<<" AddExpr
+	| ShiftExpr ">>" AddExpr
+	| ShiftExpr ">>>" AddExpr
+	;
+
+AddExpr:
+	MultExpr
+	| AddExpr '+' MultExpr
+	| AddExpr '-' MultExpr
+	;
+
+MultExpr:
+	UnExpr
+	| MultExpr '*' UnExpr
+	| MultExpr '/' UnExpr
+	| MultExpr '%' UnExpr
+	;
+
+UnExpr:
+	PreIncExpr
+	| PreDecExpr
+	| '+' UnExpr
+	| '-' UnExpr
+	| UnExprNotPlusMinus
+	;
+
+PreIncExpr:
+	"++" UnExpr
+	;
+
+PreDecExpr:
+	"--" UnExpr
+	;
+
+UnExprNotPlusMinus:
+	PostfixExpr
+	| '~' UnExpr
+	| '!' UnExpr
+	| CastExpr
+	;
+
+PostfixExpr:
+	Primary
+	| Name
+	| PostIncExpr
+	| PostDecExpr
+	;
+
+PostIncExpr:
+	PostfixExpr "++"
+	;
+
+PostDecExpr:
+	PostfixExpr "--"
+	;
+
+CastExpr:
+	'(' Type ')' UnExpr
+	;
+
+Assign:
+	LHS AssignOp Expr
+	;
+
+LHS:
+	Name
+	| FieldAccess
+	| ArrAccess
+	;
+
+AssignOp:
+	'='
+	| "*="
+	| "/="
+	| "%="
+	| "+="
+	| "-="
+	| "<<="
+	| ">>="
+	| ">>>="
+	| "&="
+	| "^="
+	| "|="
+	;
+
 
 %%
 
