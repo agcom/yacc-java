@@ -55,7 +55,7 @@
 %token NativeKeyword "native"
 %token SuperKeyword "super"
 %token WhileKeyword "while"
-%token UnderlineKeyword "_"
+%token UnderlineKeyword '_'
 %token VarKeyword "var"
 %token YieldKeyword "yield"
 %token PermitsKeyword "permits"
@@ -66,20 +66,60 @@
 %token Identifier
 %token Literal
 
+%token OpenParenthesisSeparator '('
+%token CloseParenthesisSeparator ')'
+%token OpenBraceSeparator '{'
+%token CloseBraceSeparator '}'
+%token OpenBracketSeparator '['
+%token CloseBracketSeparator ']'
+%token SemicolonSeparator ';'
+%token CommaSeparator ','
+%token DotSeparator '.'
+%token DoubleColonSeparator "::"
+
+%token AssignmentOperator '='
+%token GreaterThanOperator '>'
+%token LessThanOperator '<'
+%token NotOperator '!'
+%token ComplementOperator '~'
+%token QuestionMarkOperator '?'
+%token ColonOperator ':'
+%token AddOperator '+'
+%token MinusOperator '-'
+%token MultiplyOperator '*'
+%token XorOperator '^'
+%token ModOperator '%'
+%token OrOperator '|'
+%token AndOperator '&'
+%token DivideOperator '/'
+%token ArrowOperator "->"
+%token EqualOperator "=="
+%token GreaterThanOrEqualOperator ">="
+%token LessThanOrEqualOperator "<="
+%token NotEqualOperator "!="
+%token BooleanAndOperator "&&"
+%token BooleanOrOperator "||"
+%token IncrementOperator "++"
+%token DecrementOperator "--"
+%token ShiftLeftOperator "<<"
+%token ShiftRightOperator ">>"
+%token ShiftRightArithmeticOperator ">>>"
+%token AddAssignmentOperator "+="
+%token MinusAssignmentOperator "-="
+%token MultiplyAssignmentOperator "*="
+%token DivideAssignmentOperator "/="
+%token AndAssignmentOperator "&="
+%token OrAssignmentOperator "|="
+%token XorAssignmentOperator "^="
+%token ModAssignmentOperator "%="
+%token ShiftLeftAssignmnetOperator "<<="
+%token ShiftRightAssignmentOperator ">>="
+%token ShiftRightArithmeticAssignmentOperator ">>>="
+
 %%
 
 CompilationUnit:
 	PackageDeclarationOptional ImportDeclarationKleeneStar ClassDeclarationKleeneStar
-	;
-
-ImportDeclarationKleeneStar:
-	ImportDeclarationKleeneStar ImportDeclaration
-	| %empty
-	;
-	
-ClassDeclarationKleeneStar:
-	ClassDeclarationKleeneStar ClassDeclaration
-	| %empty
 	;
 
 PackageDeclarationOptional:
@@ -91,8 +131,22 @@ PackageDeclaration:
 	"package" Name ';'
 	;
 
+Name:
+	Identifier DotIdentifierKleeneStar
+	;
+
+DotIdentifierKleeneStar:
+	DotIdentifierKleeneStar '.' Identifier
+	| %empty
+	;
+
+ImportDeclarationKleeneStar:
+	ImportDeclarationKleeneStar ImportDeclaration
+	| %empty
+	;
+
 ImportDeclaration:
-	"import" StaticKeywordOptional Name DotStarOptional ';'
+	"import" StaticKeywordOptional Name ';'
 	;
 
 StaticKeywordOptional:
@@ -100,8 +154,8 @@ StaticKeywordOptional:
 	| %empty
 	;
 
-DotStarOptional:
-	".*"
+ClassDeclarationKleeneStar:
+	ClassDeclarationKleeneStar ClassDeclaration
 	| %empty
 	;
 
@@ -129,20 +183,20 @@ ClassExtendsOptional:
 	| %empty
 	;
 
+ClassExtends:
+	"extends" Name
+	;
+
 ClassImplementsOptional:
 	ClassImplements
 	| %empty
 	;
 
-ClassExtends:
-	"extends" Name
-	;
-
 ClassImplements:
-	"implements" NameListLeastOne
+	"implements" NameListNonEmpty
 	;
 
-NameListLeastOne:
+NameListNonEmpty:
 	Name CommaNameKleeneStar
 	;
 
@@ -162,118 +216,11 @@ ClassBodyDeclarationKleeneStar:
 
 ClassBodyDeclaration:
 	Initializer
-	| FieldDeclaration
 	| MethodDeclaration
-	| ClassDeclaration
-	;
-
-Type:
-	PrimitiveType
-	| ReferenceType
-	;
-
-PrimitiveType:
-	"byte"
-	| "short"
-	| "int"
-	| "long"
-	| "char"
-	| "float"
-	| "double"
-	| "boolean"
-	;
-	
-
-ReferenceType:
-	Name
-	| ArrayType
-	;
-
-ArrayType:
-	PrimitiveType Dims
-	| Name Dims
-	;
-
-Dims:
-	OpenBracketCloseBracketKleenePlus
-	;
-
-OpenBracketCloseBracketKleenePlus:
-	'[' ']' OpenBracketCloseBracketKleeneStar
-	;
-
-OpenBracketCloseBracketKleeneStar:
-	OpenBracketCloseBracketKleeneStar '[' ']'
-	| %empty
-	;
-
-DotIdentifierKleeneStar:
-	DotIdentifierKleeneStar '.' Identifier
-	| %empty
-	;
-
-Name:
-	Identifier DotIdentifierKleeneStar
 	;
 
 Initializer:
-	StaticKeywordOptional Block
-	;
-
-StaticKeywordOptional:
-	"static"
-	| %empty
-	;
-
-FieldDeclaration:
-	FieldModifierKleeneStar Type VariableDeclaratorListLeastOne ';'
-	;
-
-VariableDeclaratorListLeastOne:
-	VariableDeclarator CommaVariableDeclaratorKleeneStar
-	;
-
-CommaVariableDeclaratorKleeneStar:
-	CommaVariableDeclaratorKleeneStar ',' VariableDeclarator
-	;
-
-FieldModifier:
-	"public"
-	| "protected"
-	| "private"
-	| "static"
-	| "final"
-	| "transient"
-	| "volatile"
-	;
-
-FieldModifierKleeneStar:
-	FieldModifierKleeneStar FieldModifier
-	| %empty
-	;
-
-VariableDeclarator:
-	VariableDeclaratorId EqualVariableInitializerOptional
-	;
-
-EqualVariableInitializerOptional:
-	'=' VariableInitializer
-	| %empty
-	;
-	
-
-VariableDeclaratorId:
-	Identifier DimsOptional
-	;
-
-DimsOptional:
-	Dims
-	| %empty
-	;
-
-VariableInitializer:
-	Expression
-	| ArrayInitializer
+	Block
 	;
 
 MethodDeclaration:
@@ -300,14 +247,48 @@ MethodHeader:
 	Result MethodDeclarator ThrowsOptional
 	;
 
-ThrowsOptional:
-	Throws
-	| %empty
-	;
-
 Result:
 	Type
 	| "void"
+	;
+
+Type:
+	Name
+	| PrimitiveType
+	| ArrayType
+	;
+
+PrimitiveType:
+	"byte"
+	| "short"
+	| "int"
+	| "long"
+	| "char"
+	| "float"
+	| "double"
+	| "boolean"
+	;
+
+ArrayType:
+	PrimitiveTypeOrName Dims
+	;
+
+PrimitiveTypeOrName:
+	PrimitiveType
+	| Name
+	;
+
+Dims:
+	OpenBracketCloseBracketKleenePlus
+	;
+
+OpenBracketCloseBracketKleenePlus:
+	'[' ']' OpenBracketCloseBracketKleeneStar
+	;
+
+OpenBracketCloseBracketKleeneStar:
+	OpenBracketCloseBracketKleeneStar '[' ']'
+	| %empty
 	;
 
 MethodDeclarator:
@@ -315,30 +296,16 @@ MethodDeclarator:
 	;
 
 ParameterList:
-	ParameterListLeastOneOptional
-	;
-
-ParameterListLeastOneOptional:
-	ParameterListLeastOne
+	ParameterListNonEmpty
 	| %empty
 	;
 
-ParameterListLeastOne:
+ParameterListNonEmpty:
 	Parameter CommaParameterKleeneStar
 	;
 
-CommaParameterKleeneStar:
-	CommaParameterKleeneStar ',' Parameter
-	| %empty
-	;
-
 Parameter:
-	VariableModifierKleeneStar Type TripleDotIdentifierOrVariableDeclaratorId
-	;
-
-TripleDotIdentifierOrVariableDeclaratorId:
-	"..." Identifier
-	| VariableDeclaratorId
+	VariableModifierKleeneStar Type VariableDeclaratorId
 	;
 
 VariableModifierKleeneStar:
@@ -350,11 +317,30 @@ VariableModifier:
 	"final"
 	;
 
-Throws:
-	"throws" TypeListLeastOne
+VariableDeclaratorId:
+	Identifier DimsOptional
 	;
 
-TypeListLeastOne:
+CommaParameterKleeneStar:
+	CommaParameterKleeneStar ',' Parameter
+	| %empty
+	;
+
+DimsOptional:
+	Dims
+	| %empty
+	;
+
+ThrowsOptional:
+	Throws
+	| %empty
+	;
+
+Throws:
+	"throws" TypeListNonEmpty
+	;
+
+TypeListNonEmpty:
 	Type CommaTypeKleeneStar
 	;
 
@@ -365,20 +351,105 @@ CommaTypeKleeneStar:
 
 MethodBody:
 	Block
-	';'
+	| ';'
 	;
 
 Block:
-	'{' '}'
+	'{' BlockStatementKleeneStar '}'
 	;
 
-Expression:
-	%empty
+BlockStatementKleeneStar:
+	BlockStatementKleeneStar BlockStatement
+	| %empty
 	;
 
-ArrayInitializer:
-	'{' '}'
+BlockStatement:
+	VariableDeclaration
+	| Statement
 	;
+
+VariableDeclaration:
+	VariableModifierKleeneStar VariableType VariableDeclaratorListNonEmpty
+	;
+
+VariableModifierKleeneStar:
+	VariableModifierKleeneStar VariableModifier
+	| %empty
+	;
+
+VariableModifier:
+	"final"
+	;
+
+VariableType:
+	Type
+	| "var"
+	;
+
+VariableDeclaratorListNonEmpty:
+	VariableDeclarator CommaVariableDeclaratorKleeneStar
+	;
+
+CommaVariableDeclaratorKleeneStar:
+	CommaVariableDeclaratorKleeneStar ',' VariableDeclarator
+	;
+
+VariableDeclarator:
+	VariableDeclaratorId EqualVariableInitializerOptional
+	;
+
+EqualVariableInitializerOptional:
+	'=' VariableInitializer
+	| %empty
+	;
+
+VariableInitializer:
+	Expression
+	| ArrayInitializer
+	;
+
+Statement:
+	Block
+	| EmptyStatement
+	| ExpressionStatement
+	| AssertStatement
+	| SwitchStatement
+	| DoStatement
+	| BreakStatement
+	| ContinueStatement
+	| ReturnStatement
+	| SynchronizedStatement
+	| ThrowStatement
+	| TryStatement
+	| LabeledStatement
+	| IfThenStatement
+	| IfThenElseStatement
+	| WhileStatement
+	| ForStatement
+	;
+
+EmptyStatement:
+	';'
+	;
+
+ExpressionStatement:
+	StatementExpression ';'
+	;
+
+StatementExpression:
+	Assignment
+	| PreIncrementExpression
+	| PreDecrementExpression
+	| PostIncrementExpression
+	| PostDecrementExpression
+	| MethodInvocation
+	| ClassInstanceCreationExpression
+	;
+
+// Stubs
+
+Expression: Literal '+' Literal ';';
+ArrayInitializer: "new" "int" '[' ']' '{' '}';
 
 %%
 

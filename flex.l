@@ -48,7 +48,6 @@ ImportKeyword import
 PublicKeyword public
 ThrowsKeyword throws
 CaseKeyword case
-EnumKeyword enum
 InstanceofKeyword instanceof
 ReturnKeyword return
 TransientKeyword transient
@@ -74,11 +73,6 @@ SuperKeyword super
 WhileKeyword while
 UnderlineKeyword _
 VarKeyword var
-YieldKeyword yield
-PermitsKeyword permits
-SealedKeyword sealed
-NonSealedKeyword non-sealed
-RecordKeyword record
 
 Literal {IntegerLiteral}|{FloatingPointLiteral}|{BooleanLiteral}|{CharacterLiteral}|{StringLiteral}|{NullLiteral}
 
@@ -128,6 +122,56 @@ TextBlock \"\"\"[ \t\f]*{LineTerminator}({AnyCharacter}|{EscapeSequence}|{LineTe
 
 NullLiteral null
 
+OpenParenthesisSeparator \(
+CloseParenthesisSeparator \)
+OpenBraceSeparator \{
+CloseBraceSeparator \}
+OpenBracketSeparator \[
+CloseBracketSeparator \]
+SemicolonSeparator \;
+CommaSeparator ,
+DotSeparator \.
+DoubleColonSeparator ::
+
+AssignmentOperator \=
+GreaterThanOperator >
+LessThanOperator <
+NotOperator !
+ComplementOperator ~
+QuestionMarkOperator \?
+ColonOperator :
+AddOperator \+
+MinusOperator \-
+MultiplyOperator \*
+XorOperator \^
+ModOperator %
+OrOperator \|
+AndOperator &
+DivideOperator \/
+ArrowOperator ->
+EqualOperator ==
+GreaterThanOrEqualOperator >=
+LessThanOrEqualOperator <=
+NotEqualOperator !=
+BooleanAndOperator &&
+BooleanOrOperator \|\|
+IncrementOperator \+\+
+DecrementOperator --
+ShiftLeftOperator <<
+ShiftRightOperator >>
+ShiftRightArithmeticOperator >>>
+AddAssignmentOperator \+=
+MinusAssignmentOperator -=
+MultiplyAssignmentOperator \*=
+DivideAssignmentOperator \/=
+AndAssignmentOperator &=
+OrAssignmentOperator \|=
+XorAssignmentOperator \^=
+ModAssignmentOperator %=
+ShiftLeftAssignmnetOperator <<=
+ShiftRightAssignmentOperator >>=
+ShiftRightArithmeticAssignmentOperator >>>=
+
 %%
 
 {WhiteSpace}|{Comment} { /* No op. */ }
@@ -158,7 +202,6 @@ NullLiteral null
 {PublicKeyword} { return PublicKeyword; }
 {ThrowsKeyword} { return ThrowsKeyword; }
 {CaseKeyword} { return CaseKeyword; }
-{EnumKeyword} { return EnumKeyword; }
 {InstanceofKeyword} { return InstanceofKeyword; }
 {ReturnKeyword} { return ReturnKeyword; }
 {TransientKeyword} { return TransientKeyword; }
@@ -184,15 +227,61 @@ NullLiteral null
 {WhileKeyword} { return WhileKeyword; }
 {UnderlineKeyword} { return UnderlineKeyword; }
 {VarKeyword} { return VarKeyword; }
-{YieldKeyword} { return YieldKeyword; }
-{PermitsKeyword} { return PermitsKeyword; }
-{SealedKeyword} { return SealedKeyword; }
-{NonSealedKeyword} { return NonSealedKeyword; }
-{RecordKeyword} { return RecordKeyword; }
 
 {Literal} { return Literal; }
 {Identifier} { return Identifier; }
 
-(?s:.) { return yytext[0]; } // Separators, operators, and undefined lexemes fall into this rule.
+{OpenParenthesisSeparator} { return OpenParenthesisSeparator; }
+{CloseParenthesisSeparator} { return CloseParenthesisSeparator; }
+{OpenBraceSeparator} { return OpenBraceSeparator; }
+{CloseBraceSeparator} { return CloseBraceSeparator; }
+{OpenBracketSeparator} { return OpenBracketSeparator; }
+{CloseBracketSeparator} { return CloseBracketSeparator; }
+{SemicolonSeparator} { return SemicolonSeparator; }
+{CommaSeparator} { return CommaSeparator; }
+{DotSeparator} { return DotSeparator; }
+{DoubleColonSeparator} { return DoubleColonSeparator; }
+
+{AssignmentOperator} { return AssignmentOperator; }
+{GreaterThanOperator} { return GreaterThanOperator; }
+{LessThanOperator} { return LessThanOperator; }
+{NotOperator} { return NotOperator; }
+{ComplementOperator} { return ComplementOperator; }
+
+{QuestionMarkOperator} { return QuestionMarkOperator; }
+{ColonOperator} { return ColonOperator; }
+{AddOperator} { return AddOperator; }
+{MinusOperator} { return MinusOperator; }
+{MultiplyOperator} { return MultiplyOperator; }
+{XorOperator} { return XorOperator; }
+{ModOperator} { return ModOperator; }
+{OrOperator} { return OrOperator; }
+{AndOperator} { return AndOperator; }
+{DivideOperator} { return DivideOperator; }
+{ArrowOperator} { return ArrowOperator; }
+{EqualOperator} { return EqualOperator; }
+{GreaterThanOrEqualOperator} { return GreaterThanOrEqualOperator; }
+{LessThanOrEqualOperator} { return LessThanOrEqualOperator; }
+{NotEqualOperator} { return NotEqualOperator; }
+{BooleanAndOperator} { return ;BooleanAndOperator }
+{BooleanOrOperator} { return BooleanOrOperator; }
+{IncrementOperator} { return IncrementOperator; }
+{DecrementOperator} { return DecrementOperator; }
+{ShiftLeftOperator} { return ShiftLeftOperator; }
+{ShiftRightOperator} { return ShiftRightOperator; }
+{ShiftRightArithmeticOperator} { return ShiftRightArithmeticOperator; }
+{AddAssignmentOperator} { return AddAssignmentOperator; }
+{MinusAssignmentOperator} { return MinusAssignmentOperator; }
+{MultiplyAssignmentOperator} { return MultiplyAssignmentOperator; }
+{DivideAssignmentOperator} { return DivideAssignmentOperator; }
+{AndAssignmentOperator} { return AndAssignmentOperator; }
+{OrAssignmentOperator} { return OrAssignmentOperator; }
+{XorAssignmentOperator} { return XorAssignmentOperator; }
+{ModAssignmentOperator} { return ModAssignmentOperator; }
+{ShiftLeftAssignmnetOperator} { return ShiftLeftAssignmnetOperator; }
+{ShiftRightAssignmentOperator} { return ShiftRightAssignmentOperator; }
+{ShiftRightArithmeticAssignmentOperator} { return ShiftRightArithmeticOperator; }
+
+(?s:.) { return yytext[0]; }
 
 %%
