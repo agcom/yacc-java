@@ -4,11 +4,11 @@
 }
 
 %option nodefault
+%option noyywrap
 
 %{
 #include "bison.tab.h"
-#include <string.h>
-#include "tree.c"
+#include <stdarg.h>
 %}
 
 LineTerminator \r\n|[\n\r]
@@ -21,6 +21,64 @@ Comment "//"{AnyCharacter}*|"/*"({AnyCharacter}|{LineTerminator})*"*/"
 Identifier {IdentifierStart}{IdentifierPart}*
 IdentifierStart [A-Za-z]|_|"\$"
 IdentifierPart {IdentifierStart}|[0-9]
+
+AbstractKeyword abstract
+ContinueKeyword continue
+ForKeyword for
+NewKeyword new
+SwitchKeyword switch
+AssertKeyword assert
+DefaultKeyword default
+IfKeyword if
+PackageKeyword package
+SynchronizedKeyword synchronized
+BooleanKeyword boolean
+DoKeyword do
+GotoKeyword goto
+PrivateKeyword private
+ThisKeyword this
+BreakKeyword break
+DoubleKeyword double
+ImplementsKeyword implements
+ProtectedKeyword protected
+ThrowKeyword throw
+ByteKeyword byte
+ElseKeyword else
+ImportKeyword import
+PublicKeyword public
+ThrowsKeyword throws
+CaseKeyword case
+EnumKeyword enum
+InstanceofKeyword instanceof
+ReturnKeyword return
+TransientKeyword transient
+CatchKeyword catch
+ExtendsKeyword extends
+IntKeyword int
+ShortKeyword short
+TryKeyword try
+CharKeyword char
+FinalKeyword final
+InterfaceKeyword interface
+StaticKeyword static
+VoidKeyword void
+ClassKeyword class
+FinallyKeyword finally
+LongKeyword long
+StrictfpKeyword strictfp
+VolatileKeyword volatile
+ConstKeyword const
+FloatKeyword float
+NativeKeyword native
+SuperKeyword super
+WhileKeyword while
+UnderlineKeyword _
+VarKeyword var
+YieldKeyword yield
+PermitsKeyword permits
+SealedKeyword sealed
+NonSealedKeyword non-sealed
+RecordKeyword record
 
 Literal {IntegerLiteral}|{FloatingPointLiteral}|{BooleanLiteral}|{CharacterLiteral}|{StringLiteral}|{NullLiteral}
 
@@ -72,11 +130,69 @@ NullLiteral null
 
 %%
 
-{WhiteSpace}|{Comment} { /*No op.*/ };
+{WhiteSpace}|{Comment} { /* No op. */ }
 
-{Literal} { yylval = mknd(strndup(yytext, yyleng), 0, NULL); return Literal; }
-{Identifier} { yylval = mknd(strndup(yytext, yyleng), 0, NULL); return Identifier; }
+{AbstractKeyword} { return AbstractKeyword; }
+{ContinueKeyword} { return ContinueKeyword; }
+{ForKeyword} { return ForKeyword; }
+{NewKeyword} { return NewKeyword; }
+{SwitchKeyword} { return SwitchKeyword; }
+{AssertKeyword} { return AssertKeyword; }
+{DefaultKeyword} { return DefaultKeyword; }
+{IfKeyword} { return IfKeyword; }
+{PackageKeyword} { return PackageKeyword; }
+{SynchronizedKeyword} { return SynchronizedKeyword; }
+{BooleanKeyword} { return BooleanKeyword; }
+{DoKeyword} { return DoKeyword; }
+{GotoKeyword} { return GotoKeyword; }
+{PrivateKeyword} { return PrivateKeyword; }
+{ThisKeyword} { return ThisKeyword; }
+{BreakKeyword} { return BreakKeyword; }
+{DoubleKeyword} { return DoubleKeyword; }
+{ImplementsKeyword} { return ImplementsKeyword; }
+{ProtectedKeyword} { return ProtectedKeyword; }
+{ThrowKeyword} { return ThrowKeyword; }
+{ByteKeyword} { return ByteKeyword; }
+{ElseKeyword} { return ElseKeyword; }
+{ImportKeyword} { return ImportKeyword; }
+{PublicKeyword} { return PublicKeyword; }
+{ThrowsKeyword} { return ThrowsKeyword; }
+{CaseKeyword} { return CaseKeyword; }
+{EnumKeyword} { return EnumKeyword; }
+{InstanceofKeyword} { return InstanceofKeyword; }
+{ReturnKeyword} { return ReturnKeyword; }
+{TransientKeyword} { return TransientKeyword; }
+{CatchKeyword} { return CatchKeyword; }
+{ExtendsKeyword} { return ExtendsKeyword; }
+{IntKeyword} { return IntKeyword; }
+{ShortKeyword} { return ShortKeyword; }
+{TryKeyword} { return TryKeyword; }
+{CharKeyword} { return CharKeyword; }
+{FinalKeyword} { return FinalKeyword; }
+{InterfaceKeyword} { return InterfaceKeyword; }
+{StaticKeyword} { return StaticKeyword; }
+{VoidKeyword} { return VoidKeyword; }
+{ClassKeyword} { return ClassKeyword; }
+{FinallyKeyword} { return FinallyKeyword; }
+{LongKeyword} { return LongKeyword; }
+{StrictfpKeyword} { return StrictfpKeyword; }
+{VolatileKeyword} { return VolatileKeyword; }
+{ConstKeyword} { return ConstKeyword; }
+{FloatKeyword} { return FloatKeyword; }
+{NativeKeyword} { return NativeKeyword; }
+{SuperKeyword} { return SuperKeyword; }
+{WhileKeyword} { return WhileKeyword; }
+{UnderlineKeyword} { return UnderlineKeyword; }
+{VarKeyword} { return VarKeyword; }
+{YieldKeyword} { return YieldKeyword; }
+{PermitsKeyword} { return PermitsKeyword; }
+{SealedKeyword} { return SealedKeyword; }
+{NonSealedKeyword} { return NonSealedKeyword; }
+{RecordKeyword} { return RecordKeyword; }
 
-(?s:.) { return yytext[0]; } // Keywords, separators, operators, and undefined lexemes fall into this rule; they have no associated semantic value.
+{Literal} { return Literal; }
+{Identifier} { return Identifier; }
+
+(?s:.) { return yytext[0]; } // Separators, operators, and undefined lexemes fall into this rule.
 
 %%
