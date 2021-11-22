@@ -8,7 +8,6 @@
 
 %{
 #include "bison.tab.h"
-#include <stdarg.h>
 %}
 
 LineTerminator \r\n|[\n\r]
