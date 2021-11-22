@@ -55,7 +55,6 @@
 %token NativeKeyword "native"
 %token SuperKeyword "super"
 %token WhileKeyword "while"
-%token UnderlineKeyword '_'
 %token VarKeyword "var"
 %token YieldKeyword "yield"
 %token PermitsKeyword "permits"
@@ -66,32 +65,9 @@
 %token Identifier
 %token Literal
 
-%token OpenParenthesisSeparator '('
-%token CloseParenthesisSeparator ')'
-%token OpenBraceSeparator '{'
-%token CloseBraceSeparator '}'
-%token OpenBracketSeparator '['
-%token CloseBracketSeparator ']'
-%token SemicolonSeparator ';'
-%token CommaSeparator ','
-%token DotSeparator '.'
+%token TripleDotSeparator "..."
 %token DoubleColonSeparator "::"
 
-%token AssignmentOperator '='
-%token GreaterThanOperator '>'
-%token LessThanOperator '<'
-%token NotOperator '!'
-%token ComplementOperator '~'
-%token QuestionMarkOperator '?'
-%token ColonOperator ':'
-%token AddOperator '+'
-%token MinusOperator '-'
-%token MultiplyOperator '*'
-%token XorOperator '^'
-%token ModOperator '%'
-%token OrOperator '|'
-%token AndOperator '&'
-%token DivideOperator '/'
 %token ArrowOperator "->"
 %token EqualOperator "=="
 %token GreaterThanOrEqualOperator ">="
@@ -116,9 +92,13 @@
 %token ShiftRightAssignmentOperator ">>="
 %token ShiftRightArithmeticAssignmentOperator ">>>="
 
+// Uncomment both following lines to output more detailed error messages.
+// %define parse.error detailed
+// %define parse.lac full
+
 %%
 Compilation:
-	PkgOpt Imports Classes
+	PkgOpt Imports ClassOrInterOrSemicolons
 	;
 
 PkgOpt:
@@ -141,7 +121,12 @@ Imports:
 	;
 
 Import:
-	"import" StaticOpt Name ';'
+	"import" StaticOpt Name DotStarOpt ';'
+	;
+
+DotStarOpt:
+	'.' '*'
+	| %empty
 	;
 
 StaticOpt:
@@ -149,28 +134,234 @@ StaticOpt:
 	| %empty
 	;
 
-Classes:
-	Classes Class
+ClassOrInterOrSemicolons:
+	ClassOrInterOrSemicolons ClassOrInterOrSemicolon
 	| %empty
+	;
+
+ClassOrInterOrSemicolon:
+	Class
+	| Inter
+	| ';'
+	;
+
+Inter:
+	NormInter
+	| AnnInter
+	;
+
+AnnInter:
+	ClassOrInterMods '@' "interface" Identifier AnnInterBody
+	;
+
+AnnInterBody:
+	'{' AnnInterMembers '}'
+	;
+
+AnnInterMembers:
+	AnnInterMembers AnnInterMember
+	| %empty
+	;
+
+AnnInterMember:
+	AnnInterElem
+	| InterField
+	| ';'
+	;
+
+AnnInterElem:
+	InterFieldOrInterMethodMods TypeParamsOpt TypePlusVoid Identifier '(' ')' Dims DefValOpt ';'
+	;
+
+DefValOpt:
+	DefVal
+	| %empty
+	;
+
+DefVal:
+	"default" ElemVal
+	;
+
+ElemVal:
+	CondExpr
+	| ElemValArrInit
+	;
+
+ElemValArrInit:
+	'{' ElemValListNonEmpty '}'
+	;
+
+ElemValListNonEmpty:
+	ElemVal
+	| ElemValListNonEmpty ',' ElemVal
+	;
+
+NormInter:
+	ClassOrInterMods "interface" Identifier TypeParamsOpt InterExtendsOpt ClassOrInterPermitsOpt InterBody
+	;
+
+InterExtendsOpt:
+	"extends" NameListNonEmpty
+	;
+
+InterBody:
+	'{' InterMembers '}'
+	;
+
+InterMembers:
+	InterMembers InterMember
+	| %empty
+	;
+
+InterMember:
+	InterMethod
+	| InterField
+	| ';'
+	;
+
+InterField:
+	InterFieldOrInterMethodMods TypeParamsOpt TypePlusVoid VarDeclrListNonEmpty ';'
+	;
+
+InterFieldOrInterMethodMods:
+	InterFieldOrInterMethodMods InterFieldOrInterMethodMod
+	| %empty
+	;
+
+InterFieldOrInterMethodMod:
+	"public"
+	| "private"
+	| "abstract"
+	| "default"
+	| "static"
+	| "strictfp"
+	| "final"
+	;
+
+InterMethod:
+	InterFieldOrInterMethodMods TypeParamsOpt TypePlusVoid MethodDeclr ThrowsOpt MethodBody
+	;
+
+NormClass:
+	ClassOrInterMods "class" Identifier TypeParamsOpt ClassExtendsOpt ClassImplOpt ClassOrInterPermitsOpt ClassBody
+	;
+
+ClassOrInterPermitsOpt:
+	ClassOrInterPermits
+	| %empty
+	;
+
+ClassOrInterPermits:
+	"permits" NameListNonEmpty
+	;
+
+NameListNonEmpty:
+	Name
+	| NameListNonEmpty ',' Name
 	;
 
 Class:
-	ClassMods "class" Identifier ClassExtendsOpt ClassImplOpt ClassBody
+	NormClass
+	| Enum
+	| Record
 	;
 
-ClassMods:
-	ClassMods ClassMod
+Record:
+	ClassOrInterMods "record" Identifier TypeParamsOpt RecordHead ClassImplOpt RecordBody
+	;
+
+RecordHead:
+	'(' RecordCompList ')'
+	;
+
+RecordCompList:
+	RecordCompListNonEmpty
 	| %empty
 	;
 
-ClassMod:
-	"public"
+RecordCompListNonEmpty:
+	RecordComp
+	| RecordCompListNonEmpty ',' RecordComp
+	;
+
+RecordComp:
+	Type Identifier
+	| VarityRecordComp
+	;
+
+VarityRecordComp:
+	Type "..." Identifier
+	;
+
+RecordBody:
+	'{' RecordMembers '}'
+	;
+
+RecordMembers:
+	RecordMembers RecordMember
+	| %empty
+	;
+
+RecordMember:
+	ClassMember
+	| CompactConstrDecl
+	;
+
+CompactConstrDecl:
+	MethodOrFieldMods TypeParamsOpt Identifier ConstrBody
+	;
+
+ConstrBody:
+	'{' BlockStmts '}'
+	;
+
+Enum:
+	ClassOrInterMods "enum" Identifier ClassImplOpt EnumBody
+	;
+
+EnumBody:
+	'{' EnumConstList EnumBodyMembers '}'
+	;
+
+EnumBodyMembers:
+	';' ClassMembers
+	;
+
+EnumConstList:
+	EnumConstListNonEmpty
+	| %empty
+	;
+
+EnumConstListNonEmpty:
+	EnumConst
+	| EnumConstListNonEmpty ',' EnumConst
+	;
+
+EnumConst:
+	Identifier OpenParArgListCloseParOpt ClassBodyOpt
+	;
+
+OpenParArgListCloseParOpt:
+	'(' ArgList ')'
+	| %empty
+	;
+
+ClassOrInterMods:
+	ClassOrInterMods ClassOrInterMod
+	| %empty
+	;
+
+ClassOrInterMod:
+	Ann
+	| "public"
 	| "protected"
 	| "private"
 	| "abstract"
 	| "static"
 	| "final"
 	| "strictfp"
+	| "sealed"
+	| "non-sealed"
 	;
 
 ClassExtendsOpt:
@@ -191,39 +382,36 @@ ClassImpl:
 	"implements" NameListNonEmpty
 	;
 
-NameListNonEmpty:
-	Name
-	| NameListNonEmpty ',' Name
-	;
-
 ClassBody:
-	'{' ClassBodyMembers '}'
+	'{' ClassMembers '}'
 	;
 
-ClassBodyMembers:
-	ClassBodyMembers ClassBodyMember
+ClassMembers:
+	ClassMembers ClassMember
 	| %empty
 	;
 
-ClassBodyMember:
+ClassMember:
 	Init
 	| Method
+	| Field
+	| Constr
+	| ';'
 	;
 
-Init:
-	Block
+Constr:
+	MethodOrFieldMods ConstrDeclr ThrowsOpt ConstrBody
 	;
 
-Method:
-	MethodMods MethodHead MethodBody
+ConstrDeclr:
+	TypeParamsOpt Identifier '(' ParamList ')'
 	;
 
-MethodMods:
-	MethodMods MethodMod
-	| %empty
+Field:
+	MethodOrFieldMods TypeParamsOpt TypePlusVoid VarDeclrListNonEmpty ';'
 	;
 
-MethodMod:
+MethodOrFieldMod:
 	"public"
 	| "protected"
 	| "private"
@@ -233,20 +421,35 @@ MethodMod:
 	| "synchronized"
 	| "native"
 	| "strictfp"
+	| "transient"
+	| "volatile"
 	;
 
-MethodHead:
-	MethodReturnType MethodSign ThrowsOpt
+MethodOrFieldMods:
+	MethodOrFieldMods MethodOrFieldMod
+	| %empty
 	;
 
-MethodReturnType:
+Init:
+	MethodOrFieldMods Block
+	;
+
+Method:
+	MethodOrFieldMods TypeParamsOpt TypePlusVoid MethodDeclr ThrowsOpt MethodBody
+	;
+
+TypePlusVoid:
 	Type
 	| "void"
 	;
 
 Type:
+	PrimType
+	| RefType
+	;
+
+RefType:
 	Name
-	| PrimType
 	| ArrType
 	;
 
@@ -262,17 +465,22 @@ PrimType:
 	;
 
 ArrType:
-	PrimType Dims
-	| Name Dims
+	PrimType DimsNonEmpty
+	| Name DimsNonEmpty
+	;
+
+DimsNonEmpty:
+	'[' ']'
+	| DimsNonEmpty '[' ']'
+	;
+
+MethodDeclr:
+	Identifier '(' ParamList ')' Dims
 	;
 
 Dims:
-	'[' ']'
-	| Dims '[' ']'
-	;
-
-MethodSign:
-	Identifier '(' ParamList ')'
+	DimsNonEmpty
+	| %empty
 	;
 
 ParamList:
@@ -286,7 +494,12 @@ ParamListNonEmpty:
 	;
 
 Param:
-	VarMods Type Identifier
+	VarMods Type VarDeclrId
+	| VarityParam
+	;
+
+VarityParam:
+	VarMods Type "..." Identifier
 	;
 
 VarMods:
@@ -327,12 +540,14 @@ BlockStmts:
 	;
 
 BlockStmt:
-	Var
+	Class
+	| Inter
+	| VarDeclStmt
 	| Stmt
 	;
 
-Var:
-	VarMods VarType VarDeclListNonEmpty
+VarDeclStmt:
+	VarDecl ';'
 	;
 
 VarType:
@@ -340,13 +555,21 @@ VarType:
 	| "var"
 	;
 
-VarDeclListNonEmpty:
-	VarDecl
-	| VarDeclListNonEmpty ',' VarDecl
+VarDeclrListNonEmpty:
+	VarDeclr
+	| VarDeclrListNonEmpty ',' VarDeclr
 	;
 
 VarDecl:
-	Identifier VarAssignOpt
+	VarType VarDeclrListNonEmpty
+	;
+
+VarDeclr:
+	VarDeclrId VarAssignOpt
+	;
+
+VarDeclrId:
+	Identifier Dims
 	;
 
 VarAssignOpt:
@@ -376,11 +599,16 @@ Stmt:
 	| SyncStmt
 	| ThrowStmt
 	| TryStmt
+	| YieldStmt
 	| LblStmt
 	| IfStmt
 	| IfElseStmt
 	| WhileStmt
 	| ForStmt
+	;
+
+YieldStmt:
+	"yield" Expr ';'
 	;
 
 StmtNoShortIf:
@@ -442,13 +670,14 @@ SwitchStmt:
 	;
 
 SwitchBlock:
-	'{' SwitchRulesNonEmpty '}'
-	| '{' SwitchBlockStmtGroups SwitchLblColons '}'
+	'{' SwitchBlockStmtsNonEmpty '}'
+	| '{' SwitchRulesNonEmpty '}'
+	| '{' '}'
 	;
 
 SwitchRulesNonEmpty:
-	SwitchRule
-	| SwitchRulesNonEmpty SwitchRule
+	SwitchRulesNonEmpty SwitchRule
+	| SwitchRule
 	;
 
 SwitchRule:
@@ -457,28 +686,23 @@ SwitchRule:
 	| SwitchLbl "->" ThrowStmt
 	;
 
+SwitchBlockStmtsNonEmpty:
+	SwitchBlockStmtsNonEmpty SwitchBlockStmt
+	| SwitchBlockStmt
+	;
+
+SwitchBlockStmt:
+	SwitchLbl ':' BlockStmts
+	;
+
 SwitchLbl:
-	"case" CondExprListNonEmpty
+	"case" CondExprNoLambdaListNonEmpty
 	| "default"
 	;
 
-CondExprListNonEmpty:
-	CondExpr
-	| CondExprListNonEmpty ',' CondExpr
-	;
-
-SwitchBlockStmtGroups:
-	SwitchBlockStmtGroups SwitchBlockStmtGroup
-	| %empty
-	;
-
-SwitchLblColons:
-	SwitchLblColons SwitchLbl ':'
-	| %empty
-	;
-
-SwitchBlockStmtGroup:
-	SwitchLbl ':' SwitchLblColons BlockStmts
+CondExprNoLambdaListNonEmpty:
+	CondExprNoLambda
+	| CondExprNoLambdaListNonEmpty ',' CondExprNoLambda
 	;
 
 WhileStmt:
@@ -490,7 +714,7 @@ WhileStmtNoShortIf:
 	;
 
 DoStmt:
-	"do" Stmt "while" '(' Expr ')'
+	"do" Stmt "while" '(' Expr ')' ';'
 	;
 
 ForStmt:
@@ -576,6 +800,31 @@ SyncStmt:
 TryStmt:
 	"try" Block CatchesNonEmpty
 	| "try" Block Catches Finally
+	| TryWithResStmt
+	;
+
+TryWithResStmt:
+	"try" ResSpec Block Catches FinallyOpt
+	;
+
+ResSpec:
+	'(' ResListNonEmpty ')'
+	;
+
+ResListNonEmpty:
+	Res
+	| ResListNonEmpty ';' Res
+	;
+
+Res:
+	VarDecl
+	| FieldAccess
+	| Name
+	;
+
+FinallyOpt:
+	Finally
+	| %empty
 	;
 
 CatchesNonEmpty:
@@ -584,7 +833,11 @@ CatchesNonEmpty:
 	;
 
 Catch:
-	"catch" '(' VarMods CatchNameListNonEmpty ')' Block
+	"catch" '(' CatchParam ')' Block
+	;
+
+CatchParam:
+	VarMods CatchNameListNonEmpty VarDeclrId
 	;
 
 CatchNameListNonEmpty:
@@ -620,12 +873,19 @@ PrimaryNoNewArr:
 	;
 
 ClassLiteral:
-	Type '.' "class"
-	| "void" '.' "class"
+	"void" '.' "class"
+	| PrimType Dims '.' "class"
 	;
 
 NewClassExpr:
-	"new" Name '(' ArgList ')'
+	"new" Name '(' ArgList ')' ClassBodyOpt
+	| Name '.' "new" Name '(' ArgList ')' ClassBodyOpt
+	| Primary '.' "new" Name '(' ArgList ')' ClassBodyOpt
+	;
+
+ClassBodyOpt:
+	ClassBody
+	| %empty
 	;
 
 ArgList:
@@ -661,20 +921,18 @@ MethodInvoke:
 	;
 
 MethodRef:
-	Name "::" Identifier
+	RefType "::" Identifier
 	| Primary "::" Identifier
-	| ArrType "::" Identifier
+	| RefType "::" "new"
 	| "super" "::" Identifier
 	| Name '.' "super" "::" Identifier
-	| Name "::" "new"
-	| ArrType "::" "new"
 	;
 
 NewArrExpr:
 	"new" PrimType DimExprs DimsOpt
 	| "new" Name DimExprs DimsOpt
-	| "new" PrimType Dims ArrInit
-	| "new" Name Dims ArrInit
+	| "new" PrimType DimsNonEmpty ArrInit
+	| "new" Name DimsNonEmpty ArrInit
 	;
 
 DimExprs:
@@ -687,12 +945,12 @@ DimExpr:
 	;
 
 DimsOpt:
-	Dims
+	DimsNonEmpty
 	| %empty
 	;
 
 ArrInit:
-	'{' VarInitList CommaOpt '}'
+	'{' VarInitList '}'
 	;
 
 VarInitList:
@@ -705,13 +963,9 @@ VarInitListNonEmpty:
 	| VarInitListNonEmpty ',' VarInit
 	;
 
-CommaOpt:
-	','
-	| %empty
-	;
-
 Expr:
 	AssignExpr
+	| LambdaExpr
 	;
 
 AssignExpr:
@@ -719,9 +973,15 @@ AssignExpr:
 	| Assign
 	;
 
+CondExprNoLambda:
+	CondOrExpr
+	| CondOrExpr '?' Expr ':' CondExprNoLambda
+	;
+
 CondExpr:
 	CondOrExpr
 	| CondOrExpr '?' Expr ':' CondExpr
+	| CondOrExpr '?' Expr ':' LambdaExpr
 	;
 
 CondOrExpr:
@@ -730,18 +990,13 @@ CondOrExpr:
 	;
 
 CondAndExpr:
-	InclOrExpr
-	| CondOrExpr "||" CondAndExpr
+	OrExpr
+	| CondAndExpr "&&" OrExpr
 	;
 
-CondAndExpr:
-	InclOrExpr
-	| CondAndExpr "&&" InclOrExpr
-	;
-
-InclOrExpr:
+OrExpr:
 	ExclOrExpr
-	| InclOrExpr '|' ExclOrExpr
+	| OrExpr '|' ExclOrExpr
 	;
 
 ExclOrExpr:
@@ -751,7 +1006,7 @@ ExclOrExpr:
 
 AndExpr:
 	EqExpr
-	AndExpr '&' EqExpr
+	| AndExpr '&' EqExpr
 	;
 
 EqExpr:
@@ -770,7 +1025,7 @@ RelExpr:
 	;
 
 InstOfExpr:
-	RelExpr "instanceof" Name
+	RelExpr "instanceof" RefType
 	;
 
 ShiftExpr:
@@ -813,7 +1068,12 @@ UnExprNotPlusMinus:
 	PostfixExpr
 	| '~' UnExpr
 	| '!' UnExpr
-	| CastExpr
+	| TypeCastExpr
+	| SwitchExpr
+	;
+
+TypeCastExpr:
+	'(' PrimType ')' UnExpr
 	;
 
 PostfixExpr:
@@ -831,8 +1091,8 @@ PostDecExpr:
 	PostfixExpr "--"
 	;
 
-CastExpr:
-	'(' Type ')' UnExpr
+SwitchExpr:
+	"switch" '(' Expr ')' SwitchBlock
 	;
 
 Assign:
@@ -860,7 +1120,78 @@ AssignOp:
 	| "|="
 	;
 
+TypeParams:
+	'<' TypeParamListNonEmpty '>'
+	;
 
+TypeParamListNonEmpty:
+	TypeParam
+	| TypeParamListNonEmpty ',' TypeParam
+	;
+
+TypeParam:
+	Identifier TypeBoundOpt
+	;
+
+TypeBoundOpt:
+	TypeBound
+	| %empty
+	;
+
+TypeBound:
+	"extends" Name ExtraBounds
+	;
+
+ExtraBounds:
+	ExtraBounds ExtraBound
+	| %empty
+	;
+
+ExtraBound:
+	'&' Name
+	;
+
+TypeParamsOpt:
+	TypeParams
+	| %empty
+	;
+
+LambdaExpr:
+	Identifier "->" LambdaBody
+	;
+
+LambdaBody:
+	Expr
+	| Block
+	;
+
+Ann:
+	'@' Name OpenParAnnElemsCloseParOpt
+	;
+
+OpenParAnnElemsCloseParOpt:
+	'(' AnnElems ')'
+	| %empty
+	;
+
+AnnElems:
+	ElemVal
+	| ElemValPairList
+	;
+
+ElemValPairList:
+	ElemValPairListNonEmpty
+	| %empty
+	;
+
+ElemValPairListNonEmpty:
+	ElemValPairListNonEmpty ',' ElemValPair
+	| ElemValPair
+	;
+
+ElemValPair:
+	Identifier '=' ElemVal
+	;
 %%
 
 void yyerror(const char* s) {
