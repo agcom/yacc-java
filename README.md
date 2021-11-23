@@ -10,7 +10,7 @@ On a Linux operating system, clone the repository and open it in a terminal; the
 
 ```sh
 flex flex.l && bison -d bison.y && \
-gcc bison.tab.h lex.yy.c bison.tab.c && \
+gcc bison.tab.c && \
 cat Example.java | ./a.out
 ```
 
