@@ -99,8 +99,8 @@
 %token ShiftRightArithmeticAssignmentOperator ">>>="
 
 // Uncomment both following lines to output more detailed error messages.
-// %define parse.error detailed
-// %define parse.lac full
+%define parse.error detailed
+%define parse.lac full
 
 %define api.value.type {ast_node*}
 
@@ -111,15 +111,16 @@ Compilation:
 		free($1);
 		ast_imports* imports = $2->val.imports;
 		free($2);
+		ast_class_or_inters* cis = $3->val.class_or_inters;
+		free($3);
 		
-		ast_compil* compil = ast_mk_compil(pkg, imports);
+		ast_compil* compil = ast_mk_compil(pkg, imports, cis);
 		
 		$$ = ast_mk_node(AST_NODE_TYPE_COMPIL);
 		$$->val.compil = compil;
 		
 		ast_print_node($$, 0);
-		
-		printf("\nclasses and interfaces ...\n");
+		printf("\n");
 	}
 	;
 
@@ -231,19 +232,60 @@ StaticOpt:
 	;
 
 ClassOrInterOrSemicolons:
-	ClassOrInterOrSemicolons ClassOrInterOrSemicolon
-	| %empty
+	ClassOrInterOrSemicolons ClassOrInterOrSemicolon {
+		ast_class_or_inters* cis = $1->val.class_or_inters;
+		ast_class_or_inter* ci = $2->val.class_or_inter;
+		free($2);
+		
+		if (cis->len == 0) {
+			cis->arr = calloc(1, sizeof(ast_class_or_inters*));
+		} else {
+			cis->arr = realloc(cis->arr, (cis->len+1)*sizeof(ast_class_or_inters*));
+		}
+		
+		cis->arr[cis->len++] = ci;
+		
+		$$ = $1;
+	}
+	| %empty {
+		$$ = ast_mk_node(AST_NODE_TYPE_CLASS_OR_INTERS);
+		$$->val.class_or_inters = ast_mk_class_or_inters();
+	}
 	;
 
 ClassOrInterOrSemicolon:
-	Class
-	| Inter
+	Class {
+		ast_class* class = $1->val.class;
+		free($1);
+		
+		ast_class_or_inter* class_or_inter = ast_mk_class_or_inter(AST_CLASS_OR_INTER_TYPE_CLASS);
+		class_or_inter->val.class = class;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_CLASS_OR_INTER);
+		$$->val.class_or_inter = class_or_inter;
+	}
+	| Inter {
+		ast_inter* inter = $1->val.inter;
+		free($1);
+		
+		ast_class_or_inter* ci = ast_mk_class_or_inter(AST_CLASS_OR_INTER_TYPE_INTER);
+		ci->val.inter = inter;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_CLASS_OR_INTER);
+		$$->val.class_or_inter = ci;
+	}
 	| ';'
 	;
 
 Inter:
-	NormInter
-	| AnnInter
+	NormInter {
+		$$ = ast_mk_node(AST_NODE_TYPE_INTER);
+		$$->val.inter = ast_mk_inter(AST_INTER_TYPE_NORM);
+	}
+	| AnnInter {
+		$$ = ast_mk_node(AST_NODE_TYPE_INTER);
+		$$->val.inter = ast_mk_inter(AST_INTER_TYPE_ANN);
+	}
 	;
 
 AnnInter:
@@ -297,6 +339,11 @@ NormInter:
 	;
 
 InterExtendsOpt:
+	InterExtends
+	| %empty
+	;
+
+InterExtends:
 	"extends" NameListNonEmpty
 	;
 
@@ -339,27 +386,86 @@ InterMethod:
 	;
 
 NormClass:
-	ClassOrInterMods "class" Identifier TypeParamsOpt ClassExtendsOpt ClassImplOpt ClassOrInterPermitsOpt ClassBody
+	ClassOrInterMods "class" Identifier TypeParamsOpt ClassExtendsOpt ClassImplOpt ClassOrInterPermitsOpt ClassBody {
+		ast_mods* mods = $1->val.mods;
+		free($1);
+		ast_lex* id = $3->val.lex;
+		free($3);
+		ast_type_params* type_params = $4->val.type_params;
+		free($4);
+		ast_names* extends = $5->val.names;
+		free($5);
+		ast_names* impl = $6->val.names;
+		free($6);
+		ast_names* permits = $7->val.names;
+		free($7);
+		
+		ast_norm_class* norm_class = ast_mk_norm_class(mods, id, type_params, extends, impl, permits);
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_NORM_CLASS);
+		$$->val.norm_class = norm_class;
+	}
 	;
 
 ClassOrInterPermitsOpt:
-	ClassOrInterPermits
-	| %empty
+	ClassOrInterPermits { $$ = $1; }
+	| %empty {
+		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
+		$$->val.names = ast_mk_names();
+	}
 	;
 
 ClassOrInterPermits:
-	"permits" NameListNonEmpty
+	"permits" NameListNonEmpty { $$ = $2; }
 	;
 
 NameListNonEmpty:
-	Name
-	| NameListNonEmpty ',' Name
+	Name {
+		ast_name* name = $1->val.name;
+		free($1);
+		
+		ast_names* names = ast_mk_names();
+		names->arr = calloc(1, sizeof(ast_name*));
+		names->arr[names->len++] = name;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
+		$$->val.names = names;
+	}
+	| NameListNonEmpty ',' Name {
+		ast_names* names = $1->val.names;
+		ast_name* name = $3->val.name;
+		free($3);
+		
+		names->arr = realloc(names->arr, (names->len+1)*sizeof(ast_name*));
+		names->arr[names->len++] = name;
+		
+		$$ = $1;
+	}
 	;
 
 Class:
-	NormClass
-	| Enum
-	| Record
+	NormClass {
+		ast_norm_class* norm_class = $1->val.norm_class;
+		free($1);
+		
+		ast_class* class = ast_mk_class(AST_CLASS_TYPE_NORM);
+		class->val.norm = norm_class;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_CLASS);
+		$$->val.class = class;
+	}
+	| Enum {
+		ast_class* class = ast_mk_class(AST_CLASS_TYPE_ENUM);
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_CLASS);
+		$$->val.class = class;
+	}
+	| Record {
+		ast_class* class = ast_mk_class(AST_CLASS_TYPE_RECORD);
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_CLASS);
+		$$->val.class = class;
+	}
 	;
 
 Record:
@@ -416,7 +522,12 @@ Enum:
 	;
 
 EnumBody:
-	'{' EnumConstList EnumBodyMembers '}'
+	'{' EnumConstList EnumBodyMembersOpt '}'
+	;
+
+EnumBodyMembersOpt:
+	EnumBodyMembers
+	| %empty
 	;
 
 EnumBodyMembers:
@@ -522,21 +633,37 @@ ClassOrInterMod:
 	;
 
 ClassExtendsOpt:
-	ClassExtends
-	| %empty
+	ClassExtends { $$ = $1; }
+	| %empty {
+		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
+		$$->val.names = ast_mk_names();
+	}
 	;
 
 ClassExtends:
-	"extends" Name
+	"extends" Name {
+		ast_name* name = $2->val.name;
+		free($2);
+		
+		ast_names* names = ast_mk_names();
+		names->arr = calloc(1, sizeof(ast_name*));
+		names->arr[names->len++] = name;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
+		$$->val.names = names;
+	}
 	;
 
 ClassImplOpt:
-	ClassImpl
-	| %empty
+	ClassImpl { $$ = $1; }
+	| %empty {
+		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
+		$$->val.names = ast_mk_names();
+	}
 	;
 
 ClassImpl:
-	"implements" NameListNonEmpty
+	"implements" NameListNonEmpty {	$$ = $2; }
 	;
 
 ClassBody:
@@ -1278,21 +1405,58 @@ AssignOp:
 	;
 
 TypeParams:
-	'<' TypeParamListNonEmpty '>'
+	'<' TypeParamListNonEmpty '>' {
+		$$ = $2;
+	}
 	;
 
 TypeParamListNonEmpty:
-	TypeParam
-	| TypeParamListNonEmpty ',' TypeParam
+	TypeParam {
+		ast_type_param* type_param = $1->val.type_param;
+		free($1);
+		
+		ast_type_params* type_params = ast_mk_type_params();
+		type_params->type_params = calloc(1, sizeof(ast_type_param*));
+		type_params->type_params[type_params->len++] = type_param;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_TYPE_PARAMS);
+		$$->val.type_params = type_params;
+	}
+	| TypeParamListNonEmpty ',' TypeParam {
+		ast_type_params* type_params = $1->val.type_params;
+		ast_type_param* type_param = $3->val.type_param;
+		free($3);
+		
+		type_params->type_params = realloc(type_params->type_params, (type_params->len+1)*sizeof(ast_type_param*));
+		type_params->type_params[type_params->len++] = type_param;
+		
+		$$ = $1;
+	}
 	;
 
 TypeParam:
-	Identifier TypeBoundOpt
+	Identifier TypeBoundOpt {
+		ast_lex* id = $1->val.lex;
+		free($1);
+		bool has_type_bound = $2->val.bol;
+		free($2);
+		
+		ast_type_param* type_param = ast_mk_type_param(id, has_type_bound);
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_TYPE_PARAM);
+		$$->val.type_param = type_param;
+	}
 	;
 
 TypeBoundOpt:
-	TypeBound
-	| %empty
+	TypeBound {
+		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
+		$$->val.bol = true;
+	}
+	| %empty {
+		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
+		$$->val.bol = false;
+	}
 	;
 
 TypeBound:
@@ -1309,8 +1473,13 @@ ExtraBound:
 	;
 
 TypeParamsOpt:
-	TypeParams
-	| %empty
+	TypeParams { $$ = $1; }
+	| %empty {
+		ast_type_params* type_params = ast_mk_type_params();
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_TYPE_PARAMS);
+		$$->val.type_params = type_params;
+	}
 	;
 
 LambdaExpr:

@@ -47,6 +47,7 @@ ImportKeyword import
 PublicKeyword public
 ThrowsKeyword throws
 CaseKeyword case
+EnumKeyword enum
 InstanceofKeyword instanceof
 ReturnKeyword return
 TransientKeyword transient
@@ -183,6 +184,7 @@ ShiftRightArithmeticAssignmentOperator >>>=
 {PublicKeyword} { return PublicKeyword; }
 {ThrowsKeyword} { return ThrowsKeyword; }
 {CaseKeyword} { return CaseKeyword; }
+{EnumKeyword} { return EnumKeyword; }
 {InstanceofKeyword} { return InstanceofKeyword; }
 {ReturnKeyword} { return ReturnKeyword; }
 {TransientKeyword} { return TransientKeyword; }
