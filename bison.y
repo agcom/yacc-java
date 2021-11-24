@@ -157,7 +157,7 @@ Name:
 	}
 	| Identifier {
 		ast_name* name = ast_mk_name();
-		name->ids = calloc(1, sizeof(ast_lex*));
+		name->ids = malloc(sizeof(ast_lex*));
 		name->ids[0] = $1->val.lex; name->len = 1;
 		free($1);
 		
@@ -171,7 +171,7 @@ Imports:
 		ast_imports* imports = $1->val.imports;
 		
 		if (imports->len == 0) {
-			imports->imports = calloc(1, sizeof(ast_import*));
+			imports->imports = malloc(sizeof(ast_import*));
 		} else {
 			imports->imports = realloc(imports->imports, (imports->len+1)*sizeof(ast_import*));
 		}
@@ -238,7 +238,7 @@ ClassOrInterOrSemicolons:
 		free($2);
 		
 		if (cis->len == 0) {
-			cis->arr = calloc(1, sizeof(ast_class_or_inters*));
+			cis->arr = malloc(sizeof(ast_class_or_inters*));
 		} else {
 			cis->arr = realloc(cis->arr, (cis->len+1)*sizeof(ast_class_or_inters*));
 		}
@@ -393,14 +393,16 @@ NormClass:
 		free($3);
 		ast_type_params* type_params = $4->val.type_params;
 		free($4);
-		ast_names* extends = $5->val.names;
+		ast_name* extends = $5->val.name;
 		free($5);
 		ast_names* impl = $6->val.names;
 		free($6);
 		ast_names* permits = $7->val.names;
 		free($7);
+		ast_members* members = $8->val.members;
+		free($8);
 		
-		ast_norm_class* norm_class = ast_mk_norm_class(mods, id, type_params, extends, impl, permits);
+		ast_norm_class* norm_class = ast_mk_norm_class(mods, id, type_params, extends, impl, permits, members);
 		
 		$$ = ast_mk_node(AST_NODE_TYPE_NORM_CLASS);
 		$$->val.norm_class = norm_class;
@@ -425,7 +427,7 @@ NameListNonEmpty:
 		free($1);
 		
 		ast_names* names = ast_mk_names();
-		names->arr = calloc(1, sizeof(ast_name*));
+		names->arr = malloc(sizeof(ast_name*));
 		names->arr[names->len++] = name;
 		
 		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
@@ -560,7 +562,7 @@ ClassOrInterMods:
 		free($2);
 		
 		if (mods->len == 0) {
-			mods->mods = calloc(1, sizeof(ast_import*));
+			mods->mods = malloc(sizeof(ast_import*));
 		} else {
 			mods->mods = realloc(mods->mods, (mods->len+1)*sizeof(ast_mod*));
 		}
@@ -635,8 +637,8 @@ ClassOrInterMod:
 ClassExtendsOpt:
 	ClassExtends { $$ = $1; }
 	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
-		$$->val.names = ast_mk_names();
+		$$ = ast_mk_node(AST_NODE_TYPE_NAME);
+		$$->val.name = ast_mk_name();
 	}
 	;
 
@@ -645,12 +647,8 @@ ClassExtends:
 		ast_name* name = $2->val.name;
 		free($2);
 		
-		ast_names* names = ast_mk_names();
-		names->arr = calloc(1, sizeof(ast_name*));
-		names->arr[names->len++] = name;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
-		$$->val.names = names;
+		$$ = ast_mk_node(AST_NODE_TYPE_NAME);
+		$$->val.name = name;
 	}
 	;
 
@@ -667,24 +665,84 @@ ClassImpl:
 	;
 
 ClassBody:
-	'{' ClassMembers '}'
+	'{' ClassMembers '}' { $$ = $2; }
 	;
 
 ClassMembers:
-	ClassMembers ClassMember
-	| %empty
+	ClassMembers ClassMember {
+		ast_members* members = $1->val.members;
+		ast_member* member = $2->val.member;
+		free($2);
+		
+		if (members->len == 0) {
+			members->arr = malloc(sizeof(ast_member*));
+		} else {
+			members->arr = realloc(members->arr, (members->len+1)*sizeof(ast_member*));
+		}
+		
+		members->arr[members->len++] = member;
+		
+		$$ = $1;
+	}
+	| %empty {
+		ast_members* members = ast_mk_members();
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_MEMBERS);
+		$$->val.members = members;
+	}
 	;
 
 ClassMember:
-	Init
-	| Method
-	| Field
-	| Constr
+	Init {
+		ast_init* init = $1->val.init;
+		free($1);
+		
+		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_INIT);
+		member->val.init = init;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
+		$$->val.member = member;
+	}
+	| Method {
+		ast_method* method = $1->val.method;
+		free($1);
+		
+		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_METHOD);
+		member->val.method = method;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
+		$$->val.member = member;
+	}
+	| Field {
+		ast_field* field = $1->val.field;
+		free($1);
+		
+		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_FIELD);
+		member->val.field = field;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
+		$$->val.member = member;
+	}
+	| Constr {
+		ast_constr* constr = $1->val.constr;
+		free($1);
+		
+		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_CONSTR);
+		member->val.constr = constr;
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
+		$$->val.member = member;
+	}
 	| ';'
 	;
 
 Constr:
-	MethodOrFieldMods ConstrDeclr ThrowsOpt ConstrBody
+	MethodOrFieldMods ConstrDeclr ThrowsOpt ConstrBody {
+		ast_constr* constr = ast_mk_constr();
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_CONSTR);
+		$$->val.constr = constr;
+	}
 	;
 
 ConstrDeclr:
@@ -692,7 +750,12 @@ ConstrDeclr:
 	;
 
 Field:
-	MethodOrFieldMods TypeParamsOpt TypePlusVoid VarDeclrListNonEmpty ';'
+	MethodOrFieldMods TypeParamsOpt TypePlusVoid VarDeclrListNonEmpty ';' {
+		ast_field* field = ast_mk_field();
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_FIELD);
+		$$->val.field = field;
+	}
 	;
 
 MethodOrFieldMod:
@@ -715,11 +778,24 @@ MethodOrFieldMods:
 	;
 
 Init:
-	MethodOrFieldMods Block
+	MethodOrFieldMods Block {
+		ast_init* init = ast_mk_init();
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_INIT);
+		$$->val.init = init;
+	}
 	;
 
 Method:
-	MethodOrFieldMods TypeParamsOpt TypePlusVoid MethodDeclr ThrowsOpt MethodBody
+	MethodOrFieldMods TypeParamsOpt TypePlusVoid MethodDeclr ThrowsOpt MethodBody {
+		ast_lex* id = $4->val.lex;
+		free($4);
+		
+		ast_method* method = ast_mk_method(id);
+		
+		$$ = ast_mk_node(AST_NODE_TYPE_METHOD);
+		$$->val.method = method;
+	}
 	;
 
 TypePlusVoid:
@@ -759,7 +835,7 @@ DimsNonEmpty:
 	;
 
 MethodDeclr:
-	Identifier '(' ParamList ')' Dims
+	Identifier '(' ParamList ')' Dims { $$ = $1; }
 	;
 
 Dims:
@@ -1416,7 +1492,7 @@ TypeParamListNonEmpty:
 		free($1);
 		
 		ast_type_params* type_params = ast_mk_type_params();
-		type_params->type_params = calloc(1, sizeof(ast_type_param*));
+		type_params->type_params = malloc(sizeof(ast_type_param*));
 		type_params->type_params[type_params->len++] = type_param;
 		
 		$$ = ast_mk_node(AST_NODE_TYPE_TYPE_PARAMS);

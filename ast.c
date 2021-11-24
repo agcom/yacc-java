@@ -8,6 +8,7 @@
 
 typedef enum {
 	AST_NODE_TYPE_LEX,
+	AST_NODE_TYPE_LEXS,
 	AST_NODE_TYPE_BOOL,
 
 	AST_NODE_TYPE_NAME,
@@ -34,13 +35,25 @@ typedef enum {
 	AST_NODE_TYPE_INTER,
 	
 	AST_NODE_TYPE_CLASS_OR_INTER,
-	AST_NODE_TYPE_CLASS_OR_INTERS
+	AST_NODE_TYPE_CLASS_OR_INTERS,
+	
+	AST_NODE_TYPE_MEMBER,
+	AST_NODE_TYPE_INIT,
+	AST_NODE_TYPE_METHOD,
+	AST_NODE_TYPE_FIELD,
+	AST_NODE_TYPE_CONSTR,
+	AST_NODE_TYPE_MEMBERS
 } ast_node_type;
 
 typedef struct {
 	char* str;
 	int len;
 } ast_lex;
+
+typedef struct {
+	ast_lex** arr;
+	int len;
+} ast_lexs;
 
 typedef struct {
 	ast_lex** ids;
@@ -111,13 +124,47 @@ typedef struct {
 	int len;
 } ast_names;
 
+typedef enum { AST_MEMBER_TYPE_INIT, AST_MEMBER_TYPE_METHOD, AST_MEMBER_TYPE_FIELD, AST_MEMBER_TYPE_CONSTR } ast_member_type;
+
+typedef struct {
+
+} ast_init;
+
+typedef struct {
+	ast_lex* id;
+} ast_method;
+
+typedef struct {
+	ast_lex* id;
+} ast_field;
+
+typedef struct {
+
+} ast_constr;
+
+typedef struct {
+	ast_member_type type;
+	union {
+		ast_init* init;
+		ast_method* method;
+		ast_field* field;
+		ast_constr* constr;
+	} val;
+} ast_member;
+
+typedef struct {
+	ast_member** arr;
+	int len;
+} ast_members;
+
 typedef struct {
 	ast_mods* mods;
 	ast_lex* id;
 	ast_type_params* type_params;
-	ast_names* extends;
+	ast_name* extends;
 	ast_names* impl;
 	ast_names* permits;
+	ast_members* members;
 } ast_norm_class;
 
 typedef enum { AST_CLASS_TYPE_NORM, AST_CLASS_TYPE_ENUM, AST_CLASS_TYPE_RECORD } ast_class_type;
@@ -160,6 +207,7 @@ typedef struct {
 	ast_node_type type;
 	union {
 		ast_lex* lex;
+		ast_lexs* lexs;
 		bool bol;
 		
 		ast_name* name;
@@ -187,6 +235,13 @@ typedef struct {
 		
 		ast_class_or_inter* class_or_inter;
 		ast_class_or_inters* class_or_inters;
+		
+		ast_member* member;
+		ast_init* init;
+		ast_field* field;
+		ast_method* method;
+		ast_constr* constr;
+		ast_members* members;
 	} val;
 } ast_node;
 
@@ -206,6 +261,15 @@ void ast_print_bool(bool bol, int indent) {
 void ast_print_lex(ast_lex* lex, int indent) {
 	ast_print_indent(indent);
 	printf("%s", lex->str);
+}
+
+void ast_print_lexs(ast_lexs* lexs, int indent) {
+	int i;
+	for (i = 0; i < lexs->len; i++) {
+		ast_lex* lex = lexs->arr[i];
+		ast_print_lex(lex, indent);
+		if (i != lexs->len-1) printf("\n");
+	}
 }
 
 void ast_print_name(ast_name* name, int indent) {
@@ -366,6 +430,54 @@ void ast_print_names(ast_names* names, int indent) {
 	}
 }
 
+void ast_print_init(ast_init* init, int indent) {
+	ast_print_indent(indent);
+	printf("initializer ...");
+}
+
+void ast_print_method(ast_method* method, int indent) {
+	ast_print_indent(indent);
+	printf("method ");
+	ast_print_lex(method->id, 0);
+	printf(" ...");
+}
+
+void ast_print_field(ast_field* field, int indent) {
+	ast_print_indent(indent);
+	printf("field ...");
+}
+
+void ast_print_constr(ast_constr* constr, int indent) {
+	ast_print_indent(indent);
+	printf("constructor ...");
+}
+
+void ast_print_member(ast_member* member, int indent) {
+	switch (member->type) {
+		case AST_MEMBER_TYPE_INIT:
+			ast_print_init(member->val.init, indent);
+			break;
+		case AST_MEMBER_TYPE_METHOD:
+			ast_print_method(member->val.method, indent);
+			break;
+		case AST_MEMBER_TYPE_FIELD:
+			ast_print_field(member->val.field, indent);
+			break;
+		case AST_MEMBER_TYPE_CONSTR:
+			ast_print_constr(member->val.constr, indent);
+			break;
+	}
+}
+
+void ast_print_members(ast_members* members, int indent) {
+	int i;
+	for (i = 0; i < members->len; i++) {
+		ast_member* member = members->arr[i];
+		ast_print_member(member, indent);
+		if (i != members->len-1) printf("\n");
+	}
+}
+
 void ast_print_norm_class(ast_norm_class* norm_class, int indent) {
 	ast_print_indent(indent);
 	printf("class ");
@@ -385,8 +497,8 @@ void ast_print_norm_class(ast_norm_class* norm_class, int indent) {
 	if (norm_class->extends->len > 0) {
 		printf("\n");
 		ast_print_indent(indent+1);
-		printf("extends\n");
-		ast_print_names(norm_class->extends, indent+2);
+		printf("extends ");
+		ast_print_name(norm_class->extends, 0);
 	}
 	
 	if (norm_class->impl->len > 0) {
@@ -403,9 +515,12 @@ void ast_print_norm_class(ast_norm_class* norm_class, int indent) {
 		ast_print_names(norm_class->permits, indent+2);
 	}
 	
-	printf("\n");
-	ast_print_indent(indent+1);
-	printf("members ...");
+	if (norm_class->members->len > 0) {
+		printf("\n");
+		ast_print_indent(indent+1);
+		printf("members\n");
+		ast_print_members(norm_class->members, indent+2);
+	}
 }
 
 void ast_print_class(ast_class* class, int indent) {
@@ -449,16 +564,13 @@ void ast_print_class_or_inter(ast_class_or_inter* class_or_inter, int indent) {
 }
 
 void ast_print_class_or_inters(ast_class_or_inters* cis, int indent) {
-	ast_print_indent(indent);
-	printf("classes and interfaces");
-	
 	if (cis->len == 0) printf(" -");
 	else {
 		int i;
 		for (i = 0; i < cis->len; i++) {
-			printf("\n");
 			ast_class_or_inter* ci = cis->arr[i];
-			ast_print_class_or_inter(ci, indent+1);
+			ast_print_class_or_inter(ci, indent);
+			if (i != cis->len-1) printf("\n");
 		}
 	}
 }
@@ -560,6 +672,27 @@ void ast_print_node(ast_node* node, int indent) {
 		case AST_NODE_TYPE_INTER:
 			ast_print_inter(node->val.inter, indent);
 			break;
+		case AST_NODE_TYPE_MEMBER:
+			ast_print_member(node->val.member, indent);
+			break;
+		case AST_NODE_TYPE_INIT:
+			ast_print_init(node->val.init, indent);
+			break;
+		case AST_NODE_TYPE_FIELD:
+			ast_print_field(node->val.field, indent);
+			break;
+		case AST_NODE_TYPE_METHOD:
+			ast_print_method(node->val.method, indent);
+			break;
+		case AST_NODE_TYPE_CONSTR:
+			ast_print_constr(node->val.constr, indent);
+			break;
+		case AST_NODE_TYPE_MEMBERS:
+			ast_print_members(node->val.members, indent);
+			break;
+		case AST_NODE_TYPE_LEXS:
+			ast_print_lexs(node->val.lexs, indent);
+			break;
 	}
 }
 
@@ -574,6 +707,13 @@ ast_lex* ast_mk_lex(char* str, int len) {
 	lex->len = len;
 	lex->str = str;
 	return lex;
+}
+
+ast_lexs* ast_mk_lexs() {
+	ast_lexs* lexs = malloc(sizeof(ast_lexs));
+	lexs->arr = NULL;
+	lexs->len = 0;
+	return lexs;
 }
 
 ast_name* ast_mk_name() {
@@ -653,14 +793,15 @@ ast_names* ast_mk_names() {
 	return names;
 }
 
-ast_norm_class* ast_mk_norm_class(ast_mods* mods, ast_lex* id, ast_type_params* type_params, ast_names* extends, ast_names* impl, ast_names* permits) {
-	ast_norm_class* norm_class = malloc(sizeof(norm_class));
+ast_norm_class* ast_mk_norm_class(ast_mods* mods, ast_lex* id, ast_type_params* type_params, ast_name* extends, ast_names* impl, ast_names* permits, ast_members* members) {
+	ast_norm_class* norm_class = malloc(sizeof(ast_norm_class));
 	norm_class->mods = mods;
 	norm_class->id = id;
 	norm_class->type_params = type_params;
 	norm_class->extends = extends;
 	norm_class->impl = impl;
 	norm_class->permits = permits;
+	norm_class->members = members;
 	return norm_class;
 }
 
@@ -687,5 +828,39 @@ ast_inter* ast_mk_inter(ast_inter_type type) {
 	ast_inter* inter = malloc(sizeof(ast_inter));
 	inter->type = type;
 	return inter;
+}
+
+ast_member* ast_mk_member(ast_member_type type) {
+	ast_member* member = malloc(sizeof(ast_member));
+	member->type = type;
+	return member;
+}
+
+ast_init* ast_mk_init() {
+	ast_init* init = malloc(sizeof(ast_init));
+	return init;
+}
+
+ast_method* ast_mk_method(ast_lex* id) {
+	ast_method* method = malloc(sizeof(ast_method));
+	method->id = id;
+	return method;
+}
+
+ast_field* ast_mk_field() {
+	ast_field* field = malloc(sizeof(ast_field));
+	return field;
+}
+
+ast_constr* ast_mk_constr() {
+	ast_constr* constr = malloc(sizeof(ast_constr));
+	return constr;
+}
+
+ast_members* ast_mk_members() {
+	ast_members* members = malloc(sizeof(ast_members));
+	members->arr = NULL;
+	members->len = 0;
+	return members;
 }
 #endif

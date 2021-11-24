@@ -4,10 +4,20 @@ import io.github.agcom.yaccjava.internal;
 import static io.github.agcom.yaccjava.internal.*;
 
 @Deprecated("Just because")
-public final class Main<A, B, C> extends This implements That, AndThat permits AnotherOne, AndAnotherOne {
+public final class Main<A extends SomeInterface, B, C> extends This implements That, AndThat permits AnotherOne, AndAnotherOne {
+	
+	static {
+		// Static initializer
+	}
+	
+	final String name = "Alireza Ghasemi";
 	
 	public static void main(final String[] args) {
-		System.out.println("Hello world!");
+		System.out.printf("Hello %s!", name);
+	}
+	
+	public Main() {
+		// Constructor
 	}
 	
 }
