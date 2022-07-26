@@ -217,11 +217,7 @@ ShiftRightArithmeticAssignmentOperator >>>=
 {RecordKeyword} { return RecordKeyword; }
 
 {Literal} { return Literal; }
-{Identifier} {
-	yylval = ast_mk_node(AST_NODE_TYPE_LEX);
-	yylval->val.lex = ast_mk_lex(strndup(yytext, yyleng), yyleng);
-	return Identifier;
-}
+{Identifier} { return Identifier; }
 
 {TripleDotSeparator} { return TripleDotSeparator; }
 {DoubleColonSeparator} { return DoubleColonSeparator; }

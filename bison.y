@@ -1,15 +1,10 @@
 %{
 	#include <stdio.h>
 	#include "lex.yy.c"
-	#include <stdbool.h>
 	
 	int yylex();
 	void yyerror(const char*);
 %}
-
-%code requires {
-	#include "ast.c"
-}
 
 %token AbstractKeyword "abstract"
 %token ContinueKeyword "continue"
@@ -102,190 +97,58 @@
 %define parse.error detailed
 %define parse.lac full
 
-%define api.value.type {ast_node*}
-
 %%
 Compilation:
-	PkgOpt Imports ClassOrInterOrSemicolons {
-		ast_pkg* pkg = $1->val.pkg;
-		free($1);
-		ast_imports* imports = $2->val.imports;
-		free($2);
-		ast_class_or_inters* cis = $3->val.class_or_inters;
-		free($3);
-		
-		ast_compil* compil = ast_mk_compil(pkg, imports, cis);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_COMPIL);
-		$$->val.compil = compil;
-		
-		ast_print_node($$, 0);
-		printf("\n");
-	}
+	PkgOpt Imports ClassOrInterOrSemicolons
 	;
 
 PkgOpt:
-	Pkg { $$ = $1; }
-	| %empty {
-		ast_pkg* pkg = ast_mk_pkg(NULL);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_PKG);
-		$$->val.pkg = pkg;
-	}
+	Pkg
+	| %empty
 	;
 
 Pkg:
-	"package" Name ';' {
-		ast_name* name = $2->val.name;
-		free($2);
-		
-		ast_pkg* pkg = ast_mk_pkg(name);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_PKG);
-		$$->val.pkg = pkg;
-	}
+	"package" Name ';'
 	;
 
 Name:
-	Name '.' Identifier {
-		ast_name* name = $1->val.name;
-		name->ids = realloc(name->ids, (name->len+1)*sizeof(ast_lex*));
-		name->ids[name->len++] = $3->val.lex;
-		free($3);
-		
-		$$ = $1;
-	}
-	| Identifier {
-		ast_name* name = ast_mk_name();
-		name->ids = malloc(sizeof(ast_lex*));
-		name->ids[0] = $1->val.lex; name->len = 1;
-		free($1);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_NAME);
-		$$->val.name = name;
-	}
+	Name '.' Identifier
+	| Identifier
 	;
 
 Imports:
-	Imports Import {
-		ast_imports* imports = $1->val.imports;
-		
-		if (imports->len == 0) {
-			imports->imports = malloc(sizeof(ast_import*));
-		} else {
-			imports->imports = realloc(imports->imports, (imports->len+1)*sizeof(ast_import*));
-		}
-		
-		ast_import* import = $2->val.import;
-		free($2);
-		
-		imports->imports[imports->len++] = import;
-		
-		$$ = $1;
-	}
-	| %empty {
-		ast_imports* imports = ast_mk_imports();
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_IMPORTS);
-		$$->val.imports = imports;
-	}
+	Imports Import
+	| %empty
 	;
 
 Import:
-	"import" StaticOpt Name ImportDotStarOpt ';' {
-		bool is_static = $2->val.bol;
-		bool is_star = $4->val.bol;
-		ast_name* name = $3->val.name;
-		free($3);
-		
-		ast_import* import = ast_mk_import(is_static, is_star, name);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_IMPORT);
-		$$->val.import = import;
-	}
+	"import" StaticOpt Name ImportDotStarOpt ';'
 	;
 
 ImportDotStarOpt:
-	'.' '*' {
-		bool bol = true;
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = bol;
-	}
-	| %empty {
-		bool bol = false;
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = bol;
-	}
+	'.' '*'
+	| %empty
 	;
 
 StaticOpt:
-	"static" {
-		bool bol = true;
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = bol;
-	}
-	| %empty {
-		bool bol = false;
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = bol;
-	}
+	"static"
+	| %empty
 	;
 
 ClassOrInterOrSemicolons:
-	ClassOrInterOrSemicolons ClassOrInterOrSemicolon {
-		ast_class_or_inters* cis = $1->val.class_or_inters;
-		ast_class_or_inter* ci = $2->val.class_or_inter;
-		free($2);
-		
-		if (cis->len == 0) {
-			cis->arr = malloc(sizeof(ast_class_or_inters*));
-		} else {
-			cis->arr = realloc(cis->arr, (cis->len+1)*sizeof(ast_class_or_inters*));
-		}
-		
-		cis->arr[cis->len++] = ci;
-		
-		$$ = $1;
-	}
-	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_CLASS_OR_INTERS);
-		$$->val.class_or_inters = ast_mk_class_or_inters();
-	}
+	ClassOrInterOrSemicolons ClassOrInterOrSemicolon
+	| %empty
 	;
 
 ClassOrInterOrSemicolon:
-	Class {
-		ast_class* class = $1->val.class;
-		free($1);
-		
-		ast_class_or_inter* class_or_inter = ast_mk_class_or_inter(AST_CLASS_OR_INTER_TYPE_CLASS);
-		class_or_inter->val.class = class;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_CLASS_OR_INTER);
-		$$->val.class_or_inter = class_or_inter;
-	}
-	| Inter {
-		ast_inter* inter = $1->val.inter;
-		free($1);
-		
-		ast_class_or_inter* ci = ast_mk_class_or_inter(AST_CLASS_OR_INTER_TYPE_INTER);
-		ci->val.inter = inter;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_CLASS_OR_INTER);
-		$$->val.class_or_inter = ci;
-	}
+	Class
+	| Inter
 	| ';'
 	;
 
 Inter:
-	NormInter {
-		$$ = ast_mk_node(AST_NODE_TYPE_INTER);
-		$$->val.inter = ast_mk_inter(AST_INTER_TYPE_NORM);
-	}
-	| AnnInter {
-		$$ = ast_mk_node(AST_NODE_TYPE_INTER);
-		$$->val.inter = ast_mk_inter(AST_INTER_TYPE_ANN);
-	}
+	NormInter
+	| AnnInter
 	;
 
 AnnInter:
@@ -386,88 +249,27 @@ InterMethod:
 	;
 
 NormClass:
-	ClassOrInterMods "class" Identifier TypeParamsOpt ClassExtendsOpt ClassImplOpt ClassOrInterPermitsOpt ClassBody {
-		ast_mods* mods = $1->val.mods;
-		free($1);
-		ast_lex* id = $3->val.lex;
-		free($3);
-		ast_type_params* type_params = $4->val.type_params;
-		free($4);
-		ast_name* extends = $5->val.name;
-		free($5);
-		ast_names* impl = $6->val.names;
-		free($6);
-		ast_names* permits = $7->val.names;
-		free($7);
-		ast_members* members = $8->val.members;
-		free($8);
-		
-		ast_norm_class* norm_class = ast_mk_norm_class(mods, id, type_params, extends, impl, permits, members);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_NORM_CLASS);
-		$$->val.norm_class = norm_class;
-	}
+	ClassOrInterMods "class" Identifier TypeParamsOpt ClassExtendsOpt ClassImplOpt ClassOrInterPermitsOpt ClassBody
 	;
 
 ClassOrInterPermitsOpt:
-	ClassOrInterPermits { $$ = $1; }
-	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
-		$$->val.names = ast_mk_names();
-	}
+	ClassOrInterPermits
+	| %empty
 	;
 
 ClassOrInterPermits:
-	"permits" NameListNonEmpty { $$ = $2; }
+	"permits" NameListNonEmpty
 	;
 
 NameListNonEmpty:
-	Name {
-		ast_name* name = $1->val.name;
-		free($1);
-		
-		ast_names* names = ast_mk_names();
-		names->arr = malloc(sizeof(ast_name*));
-		names->arr[names->len++] = name;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
-		$$->val.names = names;
-	}
-	| NameListNonEmpty ',' Name {
-		ast_names* names = $1->val.names;
-		ast_name* name = $3->val.name;
-		free($3);
-		
-		names->arr = realloc(names->arr, (names->len+1)*sizeof(ast_name*));
-		names->arr[names->len++] = name;
-		
-		$$ = $1;
-	}
+	Name
+	| NameListNonEmpty ',' Name
 	;
 
 Class:
-	NormClass {
-		ast_norm_class* norm_class = $1->val.norm_class;
-		free($1);
-		
-		ast_class* class = ast_mk_class(AST_CLASS_TYPE_NORM);
-		class->val.norm = norm_class;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_CLASS);
-		$$->val.class = class;
-	}
-	| Enum {
-		ast_class* class = ast_mk_class(AST_CLASS_TYPE_ENUM);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_CLASS);
-		$$->val.class = class;
-	}
-	| Record {
-		ast_class* class = ast_mk_class(AST_CLASS_TYPE_RECORD);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_CLASS);
-		$$->val.class = class;
-	}
+	NormClass
+	| Enum
+	| Record
 	;
 
 Record:
@@ -556,193 +358,60 @@ OpenParArgListCloseParOpt:
 	;
 
 ClassOrInterMods:
-	ClassOrInterMods ClassOrInterMod {
-		ast_mods* mods = $1->val.mods;
-		ast_mod* mod = $2->val.mod;
-		free($2);
-		
-		if (mods->len == 0) {
-			mods->mods = malloc(sizeof(ast_import*));
-		} else {
-			mods->mods = realloc(mods->mods, (mods->len+1)*sizeof(ast_mod*));
-		}
-		mods->mods[mods->len++] = mod;
-		
-		$$ = $1;
-	}
-	| %empty {
-		ast_mods* mods = ast_mk_mods();
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_MODS);
-		$$->val.mods = mods;
-	}
+	ClassOrInterMods ClassOrInterMod
+	| %empty
 	;
 
 ClassOrInterMod:
-	Ann {
-		ast_ann* ann = $1->val.ann;
-		free($1);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_ANN);
-		$$->val.mod->mod.ann = ann;
-	}
-	| "public" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_PUBLIC;
-	}
-	| "protected" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_PROTECTED;
-	}
-	| "private" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_PRIVATE;
-	}
-	| "abstract" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_ABSTRACT;
-	}
-	| "static" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_STATIC;
-	}
-	| "final" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_FINAL;
-	}
-	| "strictfp" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_STRICTFP;
-	}
-	| "sealed" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_SEALED;
-	}
-	| "non-sealed" {
-		$$ = ast_mk_node(AST_NODE_TYPE_MOD);
-		$$->val.mod = ast_mk_mod(AST_MOD_TYPE_CONST);
-		$$->val.mod->mod.cnst = AST_CONST_MOD_NON_SEALED;
-	}
+	Ann
+	| "public"
+	| "protected"
+	| "private"
+	| "abstract"
+	| "static"
+	| "final"
+	| "strictfp"
+	| "sealed"
+	| "non-sealed"
 	;
 
 ClassExtendsOpt:
-	ClassExtends { $$ = $1; }
-	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_NAME);
-		$$->val.name = ast_mk_name();
-	}
+	ClassExtends
+	| %empty
 	;
 
 ClassExtends:
-	"extends" Name {
-		ast_name* name = $2->val.name;
-		free($2);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_NAME);
-		$$->val.name = name;
-	}
+	"extends" Name
 	;
 
 ClassImplOpt:
-	ClassImpl { $$ = $1; }
-	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_NAMES);
-		$$->val.names = ast_mk_names();
-	}
+	ClassImpl
+	| %empty
 	;
 
 ClassImpl:
-	"implements" NameListNonEmpty {	$$ = $2; }
+	"implements" NameListNonEmpty
 	;
 
 ClassBody:
-	'{' ClassMembers '}' { $$ = $2; }
+	'{' ClassMembers '}'
 	;
 
 ClassMembers:
-	ClassMembers ClassMember {
-		ast_members* members = $1->val.members;
-		ast_member* member = $2->val.member;
-		free($2);
-		
-		if (members->len == 0) {
-			members->arr = malloc(sizeof(ast_member*));
-		} else {
-			members->arr = realloc(members->arr, (members->len+1)*sizeof(ast_member*));
-		}
-		
-		members->arr[members->len++] = member;
-		
-		$$ = $1;
-	}
-	| %empty {
-		ast_members* members = ast_mk_members();
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_MEMBERS);
-		$$->val.members = members;
-	}
+	ClassMembers ClassMember
+	| %empty
 	;
 
 ClassMember:
-	Init {
-		ast_init* init = $1->val.init;
-		free($1);
-		
-		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_INIT);
-		member->val.init = init;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
-		$$->val.member = member;
-	}
-	| Method {
-		ast_method* method = $1->val.method;
-		free($1);
-		
-		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_METHOD);
-		member->val.method = method;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
-		$$->val.member = member;
-	}
-	| Field {
-		ast_field* field = $1->val.field;
-		free($1);
-		
-		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_FIELD);
-		member->val.field = field;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
-		$$->val.member = member;
-	}
-	| Constr {
-		ast_constr* constr = $1->val.constr;
-		free($1);
-		
-		ast_member* member = ast_mk_member(AST_MEMBER_TYPE_CONSTR);
-		member->val.constr = constr;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_MEMBER);
-		$$->val.member = member;
-	}
+	Init
+	| Method
+	| Field
+	| Constr
 	| ';'
 	;
 
 Constr:
-	MethodOrFieldMods ConstrDeclr ThrowsOpt ConstrBody {
-		ast_constr* constr = ast_mk_constr();
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_CONSTR);
-		$$->val.constr = constr;
-	}
+	MethodOrFieldMods ConstrDeclr ThrowsOpt ConstrBody
 	;
 
 ConstrDeclr:
@@ -750,12 +419,7 @@ ConstrDeclr:
 	;
 
 Field:
-	MethodOrFieldMods TypeParamsOpt TypePlusVoid VarDeclrListNonEmpty ';' {
-		ast_field* field = ast_mk_field();
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_FIELD);
-		$$->val.field = field;
-	}
+	MethodOrFieldMods TypeParamsOpt TypePlusVoid VarDeclrListNonEmpty ';'
 	;
 
 MethodOrFieldMod:
@@ -778,24 +442,11 @@ MethodOrFieldMods:
 	;
 
 Init:
-	MethodOrFieldMods Block {
-		ast_init* init = ast_mk_init();
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_INIT);
-		$$->val.init = init;
-	}
+	MethodOrFieldMods Block
 	;
 
 Method:
-	MethodOrFieldMods TypeParamsOpt TypePlusVoid MethodDeclr ThrowsOpt MethodBody {
-		ast_lex* id = $4->val.lex;
-		free($4);
-		
-		ast_method* method = ast_mk_method(id);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_METHOD);
-		$$->val.method = method;
-	}
+	MethodOrFieldMods TypeParamsOpt TypePlusVoid MethodDeclr ThrowsOpt MethodBody
 	;
 
 TypePlusVoid:
@@ -835,7 +486,7 @@ DimsNonEmpty:
 	;
 
 MethodDeclr:
-	Identifier '(' ParamList ')' Dims { $$ = $1; }
+	Identifier '(' ParamList ')' Dims
 	;
 
 Dims:
@@ -1481,58 +1132,21 @@ AssignOp:
 	;
 
 TypeParams:
-	'<' TypeParamListNonEmpty '>' {
-		$$ = $2;
-	}
+	'<' TypeParamListNonEmpty '>'
 	;
 
 TypeParamListNonEmpty:
-	TypeParam {
-		ast_type_param* type_param = $1->val.type_param;
-		free($1);
-		
-		ast_type_params* type_params = ast_mk_type_params();
-		type_params->type_params = malloc(sizeof(ast_type_param*));
-		type_params->type_params[type_params->len++] = type_param;
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_TYPE_PARAMS);
-		$$->val.type_params = type_params;
-	}
-	| TypeParamListNonEmpty ',' TypeParam {
-		ast_type_params* type_params = $1->val.type_params;
-		ast_type_param* type_param = $3->val.type_param;
-		free($3);
-		
-		type_params->type_params = realloc(type_params->type_params, (type_params->len+1)*sizeof(ast_type_param*));
-		type_params->type_params[type_params->len++] = type_param;
-		
-		$$ = $1;
-	}
+	TypeParam
+	| TypeParamListNonEmpty ',' TypeParam
 	;
 
 TypeParam:
-	Identifier TypeBoundOpt {
-		ast_lex* id = $1->val.lex;
-		free($1);
-		bool has_type_bound = $2->val.bol;
-		free($2);
-		
-		ast_type_param* type_param = ast_mk_type_param(id, has_type_bound);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_TYPE_PARAM);
-		$$->val.type_param = type_param;
-	}
+	Identifier TypeBoundOpt
 	;
 
 TypeBoundOpt:
-	TypeBound {
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = true;
-	}
-	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = false;
-	}
+	TypeBound
+	| %empty
 	;
 
 TypeBound:
@@ -1549,13 +1163,8 @@ ExtraBound:
 	;
 
 TypeParamsOpt:
-	TypeParams { $$ = $1; }
-	| %empty {
-		ast_type_params* type_params = ast_mk_type_params();
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_TYPE_PARAMS);
-		$$->val.type_params = type_params;
-	}
+	TypeParams
+	| %empty
 	;
 
 LambdaExpr:
@@ -1568,42 +1177,18 @@ LambdaBody:
 	;
 
 Ann:
-	'@' Name OpenParAnnElemsCloseParOpt {
-		ast_name* name = $2->val.name;
-		free($2);
-		bool has_elems = $3->val.bol;
-		free($3);
-	
-		ast_ann* ann = ast_mk_ann(name, has_elems);
-		
-		$$ = ast_mk_node(AST_NODE_TYPE_ANN);
-		$$->val.ann = ann;
-	}
+	'@' Name OpenParAnnElemsCloseParOpt
 	;
 
 OpenParAnnElemsCloseParOpt:
-	'(' AnnElems ')' {
-		$$ = $2;
-	}
-	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = false;
-	}
+	'(' AnnElems ')'
+	| %empty
 	;
 
 AnnElems:
-	ElemVal {
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = true;
-	}
-	| ElemValPairListNonEmpty {
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = true;
-	}
-	| %empty {
-		$$ = ast_mk_node(AST_NODE_TYPE_BOOL);
-		$$->val.bol = false;
-	}
+	ElemVal
+	| ElemValPairListNonEmpty
+	| %empty
 	;
 
 ElemValPairListNonEmpty:
