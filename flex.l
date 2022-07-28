@@ -10,6 +10,10 @@
 #include "bison.tab.h"
 %}
 
+Input {InputElement}*
+InputElement {WhiteSpace}|{Comment}|{Token}
+Token {Identifier}|{Keyword}|{Literal}|{Separator}|{Operator}
+
 LineTerminator \r\n|[\n\r]
 
 AnyCharacter [^\r\n]
@@ -20,6 +24,9 @@ Comment "//"{AnyCharacter}*|"/*"({AnyCharacter}|{LineTerminator})*"*/"
 Identifier {IdentifierStart}{IdentifierPart}*
 IdentifierStart [A-Za-z]|_|"\$"
 IdentifierPart {IdentifierStart}|[0-9]
+
+Keyword {ReservedKeyword}
+ReservedKeyword {AbstractKeyword}|{ContinueKeyword}|{ForKeyword}|{NewKeyword}|{SwitchKeyword}|{AssertKeyword}|{DefaultKeyword}|{IfKeyword}|{PackageKeyword}|{SynchronizedKeyword}|{BooleanKeyword}|{DoKeyword}|{GotoKeyword}|{PrivateKeyword}|{ThisKeyword}|{BreakKeyword}|{DoubleKeyword}|{ImplementsKeyword}|{ProtectedKeyword}|{ThrowKeyword}|{ByteKeyword}|{ElseKeyword}|{ImportKeyword}|{PublicKeyword}|{ThrowsKeyword}|{CaseKeyword}|{EnumKeyword}|{InstanceofKeyword}|{ReturnKeyword}|{TransientKeyword}|{CatchKeyword}|{ExtendsKeyword}|{IntKeyword}|{ShortKeyword}|{TryKeyword}|{CharKeyword}|{FinalKeyword}|{InterfaceKeyword}|{StaticKeyword}|{VoidKeyword}|{ClassKeyword}|{FinallyKeyword}|{LongKeyword}|{StrictfpKeyword}|{VolatileKeyword}|{ConstKeyword}|{FloatKeyword}|{NativeKeyword}|{SuperKeyword}|{WhileKeyword}|{UnderlineKeyword}|{VarKeyword}|{YieldKeyword}|{PermitsKeyword}|{SealedKeyword}|{NonSealedKeyword}|{RecordKeyword}
 
 AbstractKeyword abstract
 ContinueKeyword continue
@@ -127,6 +134,9 @@ TextBlock \"\"\"[ \t\f]*{LineTerminator}({AnyCharacter}|{EscapeSequence}|{LineTe
 
 NullLiteral null
 
+Separator [(){}[\];,.@]|{TripleDotSeparator}|{DoubleColonSeparator}
+Operator [=><!~?:+\-*^%|&/]|{ArrowOperator}|{EqualOperator}|{GreaterThanOrEqualOperator}|{LessThanOrEqualOperator}|{NotEqualOperator}|{BooleanAndOperator}|\|{BooleanOrOperator}|{IncrementOperator}|{DecrementOperator}|{ShiftLeftOperator}|{ShiftRightOperator}|{ShiftRightArithmeticOperator}|{AddAssignmentOperator}|{MinusAssignmentOperator}|{MultiplyAssignmentOperator}|{DivideAssignmentOperator}|{AndAssignmentOperator}|{OrAssignmentOperator}|{XorAssignmentOperator}|{ModAssignmentOperator}|{ShiftLeftAssignmnetOperator}|{ShiftRightAssignmentOperator}|{ShiftRightArithmeticAssignmentOperator}
+
 TripleDotSeparator "..."
 DoubleColonSeparator ::
 
@@ -158,6 +168,7 @@ ShiftRightArithmeticAssignmentOperator >>>=
 
 {WhiteSpace}|{Comment} { /* No op. */ }
 
+	/* {ReservedKeyword} printlnCurrentToken(); */
 {AbstractKeyword} { return AbstractKeyword; }
 {ContinueKeyword} { return ContinueKeyword; }
 {ForKeyword} { return ForKeyword; }
@@ -216,9 +227,12 @@ ShiftRightArithmeticAssignmentOperator >>>=
 {NonSealedKeyword} { return NonSealedKeyword; }
 {RecordKeyword} { return RecordKeyword; }
 
+	/* {Literal} printlnCurrentTokenWithName("literal"); */
 {Literal} { return Literal; }
+	/* {Identifier} printlnCurrentTokenWithName("identifier"); */
 {Identifier} { return Identifier; }
 
+	/* {Separator}|{Operator} printlnCurrentToken(); */
 {TripleDotSeparator} { return TripleDotSeparator; }
 {DoubleColonSeparator} { return DoubleColonSeparator; }
 
@@ -246,6 +260,33 @@ ShiftRightArithmeticAssignmentOperator >>>=
 {ShiftRightAssignmentOperator} { return ShiftRightAssignmentOperator; }
 {ShiftRightArithmeticAssignmentOperator} { return ShiftRightArithmeticAssignmentOperator; }
 
+	/* (?s:.) printlnCurrentTokenWithName("unknown"); */
 (?s:.) { return yytext[0]; } // Other single character tokens and undefined ones fall into this rule.
 
 %%
+
+	/*
+void printlnCurrentToken() {
+	printlnMonuple(yytext);
+}
+
+void printlnCurrentTokenWithName(const char* name) {
+	printlnCouple(name, yytext);
+}
+
+void printlnMonuple(const char* first) {
+	printfln("%s", first);
+}
+
+void printlnCouple(const char* first, const char* second) {
+	printfln("%s %s", first, second);
+}
+
+void printfln(const char* format, ...) {
+	va_list args;
+	va_start(args, format);
+	vprintf(format, args);
+	va_end(args);
+	printf("\n");
+}
+	*/
