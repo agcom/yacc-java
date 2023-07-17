@@ -1,6 +1,6 @@
 # Yacc Java
 
-Java SE 17 language Bison (GNU version of Yacc) parser; was made as a homework for a **compiler design principles** college course.
+Java SE 17 language Bison (GNU version of Yacc) parser; was made as a homework for a **compiler design principles** university course.
 
 The parser is a [LALR(1) parser](https://en.wikipedia.org/wiki/LALR_parser), accepts a superset of the language, and supports almost every feature of the language; see [the issues](https://github.com/agcom/yacc-java/issues) for its shortcomings, and if you found one that isn't acknowledged, feel free to submit it as a new issue.
 
